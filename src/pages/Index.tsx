@@ -1,4 +1,5 @@
 import BalanceCard from "@/components/wallet/BalanceCard";
+import PortfolioChart from "@/components/wallet/PortfolioChart";
 import AssetsList from "@/components/wallet/AssetsList";
 import RecentTransactions from "@/components/wallet/RecentTransactions";
 import BottomNav from "@/components/wallet/BottomNav";
