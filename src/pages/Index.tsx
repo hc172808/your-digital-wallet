@@ -3,7 +3,8 @@ import PortfolioChart from "@/components/wallet/PortfolioChart";
 import AssetsList from "@/components/wallet/AssetsList";
 import RecentTransactions from "@/components/wallet/RecentTransactions";
 import BottomNav from "@/components/wallet/BottomNav";
-import { Bell } from "lucide-react";
+import { Bell, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
