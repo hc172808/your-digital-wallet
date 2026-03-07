@@ -11,6 +11,7 @@ const TOKENS = [
   { symbol: "USDT", name: "Tether", price: 1.0, balance: 1367.72, color: "from-emerald-400 to-green-500" },
   { symbol: "AVAX", name: "Avalanche", price: 42.15, balance: 25.0, color: "from-red-400 to-rose-500" },
   { symbol: "MATIC", name: "Polygon", price: 0.92, balance: 500.0, color: "from-violet-500 to-purple-500" },
+  { symbol: "GYDS", name: "GYDS Network", price: 0.15, balance: 10000.0, color: "from-cyan-400 to-teal-500", network: { rpcUrl: "https://rpc.netlifegy.com", chainId: 13370, chainIdHex: "0x343A", decimals: 18, explorer: "https://explorer.netlifegy.com" } },
 ];
 
 const Swap = () => {
