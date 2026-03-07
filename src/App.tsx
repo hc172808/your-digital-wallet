@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Send from "./pages/Send";
+import Swap from "./pages/Swap";
 import Receive from "./pages/Receive";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
@@ -21,6 +22,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/send" element={<Send />} />
+          <Route path="/swap" element={<Swap />} />
           <Route path="/receive" element={<Receive />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />

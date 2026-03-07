@@ -1,8 +1,10 @@
 import BalanceCard from "@/components/wallet/BalanceCard";
+import PortfolioChart from "@/components/wallet/PortfolioChart";
 import AssetsList from "@/components/wallet/AssetsList";
 import RecentTransactions from "@/components/wallet/RecentTransactions";
 import BottomNav from "@/components/wallet/BottomNav";
-import { Bell } from "lucide-react";
+import { Bell, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
@@ -14,15 +16,25 @@ const Index = () => {
             <p className="text-sm text-muted-foreground">Welcome back</p>
             <h2 className="text-xl font-display font-bold text-foreground">CryptoWallet</h2>
           </div>
-          <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full gradient-primary" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
+              <Bell size={20} />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full gradient-primary" />
+            </button>
+            <Link to="/settings" className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+              <Settings size={20} />
+            </Link>
+          </div>
         </div>
 
         {/* Balance */}
         <div className="mb-8">
           <BalanceCard />
+        </div>
+
+        {/* Portfolio Chart */}
+        <div className="mb-8">
+          <PortfolioChart />
         </div>
 
         {/* Assets */}
