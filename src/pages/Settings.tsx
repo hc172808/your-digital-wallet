@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Shield, Bell, Moon, HelpCircle, LogOut, ChevronRight, ArrowLeft, Lock, Fingerprint, Key, Sun, Monitor, Mail, MessageSquare, FileText } from "lucide-react";
+import { User, Shield, Bell, Moon, HelpCircle, LogOut, ChevronRight, ArrowLeft, Lock, Fingerprint, Key, Sun, Monitor, Mail, MessageSquare, FileText, Globe } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import BottomNav from "@/components/wallet/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { APP_VERSION } from "@/lib/network-config";
 
 type SettingsPanel = null | "profile" | "security" | "notifications" | "appearance" | "help";
 
@@ -262,6 +264,14 @@ const Settings = () => {
                 <LogOut size={18} />
                 <span className="font-semibold">Log Out</span>
               </motion.button>
+
+              <div className="mt-6 flex items-center justify-between text-xs text-muted-foreground px-2">
+                <span>v{APP_VERSION}</span>
+                <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                  <Globe size={12} />
+                  Network Admin
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

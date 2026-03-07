@@ -7,6 +7,7 @@ const ASSETS = [
   { symbol: "SOL", name: "Solana", price: "$178.90", change: "-0.5%", up: false, amount: "12.50", value: "$2,236.25", color: "from-purple-500 to-fuchsia-500" },
   { symbol: "USDT", name: "Tether", price: "$1.00", change: "0.0%", up: true, amount: "1,367.72", value: "$1,367.72", color: "from-emerald-400 to-green-500" },
   { symbol: "GYDS", name: "GYDS Network", price: "$0.15", change: "+12.4%", up: true, amount: "10,000", value: "$1,500.00", color: "from-cyan-400 to-teal-500" },
+  { symbol: "GYD", name: "GYD Stablecoin", price: "$1.00", change: "0.0%", up: true, amount: "5,000", value: "$5,000.00", color: "from-sky-400 to-cyan-500" },
 ];
 
 const AssetsList = () => {
