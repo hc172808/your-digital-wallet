@@ -26,6 +26,11 @@ const Index = () => {
           <BalanceCard />
         </div>
 
+        {/* Portfolio Chart */}
+        <div className="mb-8">
+          <PortfolioChart />
+        </div>
+
         {/* Assets */}
         <div className="mb-8">
           <AssetsList />

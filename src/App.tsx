@@ -22,6 +22,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/send" element={<Send />} />
+          <Route path="/swap" element={<Swap />} />
           <Route path="/receive" element={<Receive />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />
