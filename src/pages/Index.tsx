@@ -16,10 +16,15 @@ const Index = () => {
             <p className="text-sm text-muted-foreground">Welcome back</p>
             <h2 className="text-xl font-display font-bold text-foreground">CryptoWallet</h2>
           </div>
-          <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full gradient-primary" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
+              <Bell size={20} />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full gradient-primary" />
+            </button>
+            <Link to="/settings" className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+              <Settings size={20} />
+            </Link>
+          </div>
         </div>
 
         {/* Balance */}
