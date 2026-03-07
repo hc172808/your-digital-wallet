@@ -264,6 +264,14 @@ const Settings = () => {
                 <LogOut size={18} />
                 <span className="font-semibold">Log Out</span>
               </motion.button>
+
+              <div className="mt-6 flex items-center justify-between text-xs text-muted-foreground px-2">
+                <span>v{APP_VERSION}</span>
+                <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                  <Globe size={12} />
+                  Network Admin
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
