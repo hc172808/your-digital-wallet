@@ -89,7 +89,7 @@ export const exportPrivateKey = async (password: string): Promise<string> => {
  */
 export const exportMnemonic = async (password: string): Promise<string | null> => {
   const wallet = await unlockWallet(password);
-  return wallet.mnemonic?.phrase || null;
+  return (wallet as any).mnemonic?.phrase || null;
 };
 
 /**
