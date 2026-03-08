@@ -21,16 +21,47 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts-cache",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "gstatic-fonts-cache",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/rpc\.netlifegy\.com\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "rpc-cache",
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+        ],
       },
       manifest: {
-        name: "CryptoWallet",
-        short_name: "CryptoWallet",
-        description: "Your bold & colorful crypto wallet",
+        name: "GYDS Wallet",
+        short_name: "GYDS",
+        description: "GYDS Network Wallet — send, receive, swap, and manage GYDS & GYD on the go.",
         theme_color: "#0f1318",
         background_color: "#0f1318",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
+        scope: "/",
+        categories: ["finance", "utilities"],
         icons: [
           { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
           { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
