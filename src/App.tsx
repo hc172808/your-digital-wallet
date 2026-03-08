@@ -31,6 +31,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/network" element={<Network />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/token/:symbol" element={<TokenDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
