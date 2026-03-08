@@ -275,8 +275,11 @@ const TokenDetail = () => {
           ))}
         </motion.div>
 
+        {/* Community Chat */}
+        <TokenChat symbol={token.symbol} tokenName={token.name} />
+
         {/* About */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mb-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="mb-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">About</h2>
           <div className="bg-card rounded-2xl p-4">
             <p className="text-sm text-foreground leading-relaxed">{token.description}</p>
