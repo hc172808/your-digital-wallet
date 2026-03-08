@@ -86,9 +86,9 @@ const TokenDetail = () => {
 
   const hasCoinGecko = token ? !!getCoinGeckoId(token.symbol) : false;
 
-  // Fetch wallet & balance
+  // Get wallet address from internal wallet
   useEffect(() => {
-    getConnectedWallet().then(setWalletAddress);
+    setWalletAddress(getWalletAddress());
   }, []);
 
   useEffect(() => {
