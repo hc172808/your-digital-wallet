@@ -103,6 +103,7 @@ const AssetsList = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.1, duration: 0.4 }}
+            onClick={() => navigate(`/token/${asset.symbol}`)}
             className="flex items-center gap-3 bg-card rounded-xl p-4 hover:bg-secondary/50 transition-colors cursor-pointer"
           >
             <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${asset.color} flex items-center justify-center text-sm font-bold text-foreground`}>
