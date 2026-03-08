@@ -1,28 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowUpRight, QrCode, Loader2, ScanLine, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, QrCode, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/wallet/BottomNav";
-import { getNetworkConfig } from "@/lib/network-config";
+import { getNetworkConfig, getActiveRpc } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
-import { connectWallet, getConnectedWallet } from "@/lib/balance-fetcher";
+import { getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction } from "@/lib/wallet-core";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_TOKENS = [
-  { symbol: "GYDS", name: "GYDS (Native)", contractAddress: null, decimals: 18 },
-  { symbol: "GYD", name: "GYD Stablecoin", contractAddress: null, decimals: 18 },
+  { symbol: "GYDS", name: "GYDS (Native)", contractAddress: null as string | null, decimals: 18 },
+  { symbol: "GYD", name: "GYD Stablecoin", contractAddress: null as string | null, decimals: 18 },
 ];
 
 const Send = () => {
   const [selectedToken, setSelectedToken] = useState(DEFAULT_TOKENS[0]);
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
-  const [wallet, setWallet] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [sending, setSending] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const { toast } = useToast();
   const config = getNetworkConfig();
+  const wallet = getWalletAddress();
 
   const customTokens = getCustomTokens();
   const allTokens = [
@@ -30,83 +32,12 @@ const Send = () => {
     ...customTokens.map((t) => ({ symbol: t.symbol, name: t.name, contractAddress: t.contractAddress, decimals: t.decimals })),
   ];
 
-  useEffect(() => {
-    getConnectedWallet().then(setWallet);
-  }, []);
-
-  const handleConnect = async () => {
-    const addr = await connectWallet();
-    if (addr) {
-      setWallet(addr);
-      // Ensure we're on the GYDS network
-      try {
-        const ethereum = (window as any).ethereum;
-        await ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: config.chainIdHex }],
-        });
-      } catch (switchError: any) {
-        if (switchError.code === 4902) {
-          const eth = (window as any).ethereum;
-          await eth.request({
-            method: "wallet_addEthereumChain",
-            params: [{
-              chainId: config.chainIdHex,
-              chainName: config.name,
-              nativeCurrency: { name: config.name, symbol: config.symbol, decimals: config.decimals },
-              rpcUrls: [config.rpcUrls[0]],
-              blockExplorerUrls: [config.blockExplorer],
-            }],
-          });
-        }
-      }
-    } else {
-      toast({ title: "MetaMask not found", description: "Install MetaMask to send transactions.", variant: "destructive" });
-    }
-  };
-
-  const sendNativeToken = async () => {
-    const ethereum = (window as any).ethereum;
-    const amountWei = "0x" + (BigInt(Math.floor(parseFloat(amount) * 1e18)).toString(16));
-
-    const txHash = await ethereum.request({
-      method: "eth_sendTransaction",
-      params: [{
-        from: wallet,
-        to: address,
-        value: amountWei,
-        gas: "0x5208", // 21000
-      }],
-    });
-    return txHash;
-  };
-
-  const sendERC20Token = async (contractAddress: string, decimals: number) => {
-    const ethereum = (window as any).ethereum;
-    const amountRaw = BigInt(Math.floor(parseFloat(amount) * (10 ** decimals)));
-    const paddedTo = address.toLowerCase().replace("0x", "").padStart(64, "0");
-    const paddedAmount = amountRaw.toString(16).padStart(64, "0");
-    // transfer(address,uint256) = 0xa9059cbb
-    const data = `0xa9059cbb${paddedTo}${paddedAmount}`;
-
-    const txHash = await ethereum.request({
-      method: "eth_sendTransaction",
-      params: [{
-        from: wallet,
-        to: contractAddress,
-        data,
-        gas: "0x186A0", // 100000
-      }],
-    });
-    return txHash;
-  };
-
   const handleSend = async () => {
     setTxError(null);
     setTxHash(null);
 
     if (!wallet) {
-      toast({ title: "Connect wallet first", variant: "destructive" });
+      toast({ title: "No wallet found", variant: "destructive" });
       return;
     }
     if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
@@ -117,24 +48,33 @@ const Send = () => {
       toast({ title: "Enter a valid amount", variant: "destructive" });
       return;
     }
+    if (!password) {
+      toast({ title: "Enter your wallet password", variant: "destructive" });
+      return;
+    }
 
     setSending(true);
     try {
+      const unlockedWallet = await unlockWallet(password);
+      const rpc = await getActiveRpc();
+      if (!rpc) throw new Error("No RPC available");
+
       let hash: string;
       if (!selectedToken.contractAddress) {
-        // Native GYDS token
-        hash = await sendNativeToken();
+        hash = await sendNativeTransaction(unlockedWallet, address, amount, rpc);
       } else {
-        hash = await sendERC20Token(selectedToken.contractAddress, selectedToken.decimals);
+        hash = await sendERC20Transaction(unlockedWallet, selectedToken.contractAddress, address, amount, selectedToken.decimals, rpc);
       }
       setTxHash(hash);
       toast({ title: "Transaction sent!", description: `TX: ${hash.slice(0, 10)}...` });
     } catch (err: any) {
       const msg = err?.message || "Transaction failed";
-      setTxError(msg.length > 100 ? msg.slice(0, 100) + "..." : msg);
-      if (err.code !== 4001) {
-        toast({ title: "Transaction failed", description: msg, variant: "destructive" });
+      if (msg.includes("invalid password") || msg.includes("incorrect")) {
+        setTxError("Wrong password");
+      } else {
+        setTxError(msg.length > 100 ? msg.slice(0, 100) + "..." : msg);
       }
+      toast({ title: "Transaction failed", description: msg, variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -151,15 +91,8 @@ const Send = () => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          {/* Wallet connection */}
-          {!wallet ? (
-            <button
-              onClick={handleConnect}
-              className="w-full flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-xl py-3 text-sm font-medium hover:bg-primary/20 transition-colors"
-            >
-              Connect MetaMask to Send
-            </button>
-          ) : (
+          {/* From address */}
+          {wallet && (
             <div className="flex items-center gap-2 bg-card rounded-xl px-4 py-3">
               <div className="w-2 h-2 rounded-full bg-[hsl(var(--success))]" />
               <span className="text-sm text-muted-foreground">From:</span>
@@ -220,18 +153,30 @@ const Send = () => {
             </div>
           </div>
 
+          {/* Password to sign */}
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Wallet Password</label>
+            <div className="bg-card rounded-xl p-4 flex items-center gap-3">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password to sign"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
+              />
+              <button onClick={() => setShowPassword(!showPassword)} className="text-muted-foreground hover:text-primary transition-colors">
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
           {/* TX Result */}
           {txHash && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[hsl(var(--success))]/10 rounded-xl p-4 flex items-start gap-3">
               <CheckCircle2 size={20} className="text-[hsl(var(--success))] shrink-0 mt-0.5" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">Transaction Sent</p>
-                <a
-                  href={`${config.blockExplorer}/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline break-all"
-                >
+                <a href={`${config.blockExplorer}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all">
                   {txHash}
                 </a>
               </div>
@@ -251,15 +196,11 @@ const Send = () => {
           {/* Send button */}
           <button
             onClick={handleSend}
-            disabled={sending || !wallet}
+            disabled={sending}
             className="w-full gradient-primary text-primary-foreground font-semibold py-4 rounded-xl glow-primary hover:opacity-90 transition-opacity flex items-center justify-center gap-2 text-lg disabled:opacity-60"
           >
-            {sending ? (
-              <Loader2 size={20} className="animate-spin" />
-            ) : (
-              <ArrowUpRight size={20} />
-            )}
-            {sending ? "Confirming..." : `Send ${selectedToken.symbol}`}
+            {sending ? <Loader2 size={20} className="animate-spin" /> : <ArrowUpRight size={20} />}
+            {sending ? "Signing..." : `Send ${selectedToken.symbol}`}
           </button>
         </motion.div>
       </div>
