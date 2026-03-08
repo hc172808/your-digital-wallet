@@ -184,7 +184,7 @@ const Admin = () => {
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Server size={16} className="text-primary" /> RPC Endpoints
             </h2>
-            <p className="text-xs text-muted-foreground">Listed in priority order. First available endpoint is used.</p>
+            <p className="text-xs text-muted-foreground">Backup failover order — reads the indexer, next available is used if one goes down.</p>
 
             {config.rpcUrls.map((url, i) => (
               <motion.div
