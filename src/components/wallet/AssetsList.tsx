@@ -16,6 +16,7 @@ const DEFAULT_ASSETS = [
 ];
 
 const AssetsList = () => {
+  const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({});
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
