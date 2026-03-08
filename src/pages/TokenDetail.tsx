@@ -6,9 +6,10 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import BottomNav from "@/components/wallet/BottomNav";
 import { getNetworkConfig } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
-import { getConnectedWallet, fetchNativeBalance, fetchTokenBalance } from "@/lib/balance-fetcher";
+import { fetchNativeBalance, fetchTokenBalance } from "@/lib/balance-fetcher";
 import { fetchPrices, fetchPriceHistory, formatPrice, formatChange, getCoinGeckoId, type PriceHistoryPoint } from "@/lib/price-fetcher";
 import { useToast } from "@/hooks/use-toast";
+import { getWalletAddress } from "@/lib/wallet-core";
 
 interface TokenInfo {
   symbol: string;
@@ -85,9 +86,9 @@ const TokenDetail = () => {
 
   const hasCoinGecko = token ? !!getCoinGeckoId(token.symbol) : false;
 
-  // Fetch wallet & balance
+  // Get wallet address from internal wallet
   useEffect(() => {
-    getConnectedWallet().then(setWalletAddress);
+    setWalletAddress(getWalletAddress());
   }, []);
 
   useEffect(() => {

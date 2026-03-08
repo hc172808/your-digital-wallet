@@ -1,56 +1,42 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Wallet, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getCustomTokens, type CustomToken } from "@/lib/custom-tokens";
 import { TokenManager } from "@/components/wallet/ImportToken";
-import { fetchNativeBalance, fetchAllTokenBalances, getConnectedWallet, connectWallet } from "@/lib/balance-fetcher";
+import { fetchNativeBalance, fetchAllTokenBalances } from "@/lib/balance-fetcher";
 import { fetchPrices, formatPrice, formatChange, type PriceData } from "@/lib/price-fetcher";
-
-// Only GYDS (native) and GYD are built-in network tokens — no demo balances
-const NATIVE_ASSETS = [
-  { symbol: "GYDS", name: "GYDS Network", color: "from-cyan-400 to-teal-500", decimals: 18, contractAddress: null as string | null },
-  { symbol: "GYD", name: "GYD Stablecoin", color: "from-sky-400 to-cyan-500", decimals: 18, contractAddress: null as string | null },
-];
+import { getWalletAddress } from "@/lib/wallet-core";
 
 const AssetsList = () => {
   const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({});
   const [nativeBalance, setNativeBalance] = useState<string>("0");
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [prices, setPrices] = useState<Record<string, PriceData>>({});
   const customTokens = getCustomTokens();
-
-  // Try to get connected wallet on mount
-  useEffect(() => {
-    getConnectedWallet().then(setWalletAddress);
-  }, []);
+  const walletAddress = getWalletAddress();
 
   // Fetch live prices from CoinGecko
   useEffect(() => {
     const symbols = customTokens.map((t) => t.symbol);
-    // Include any known symbols
     fetchPrices([...symbols]).then(setPrices);
     const interval = setInterval(() => {
       fetchPrices([...symbols]).then(setPrices);
-    }, 60000); // refresh every 60s
+    }, 60000);
     return () => clearInterval(interval);
   }, [customTokens.length]);
 
-  // Fetch balances when wallet is connected
+  // Fetch balances
   useEffect(() => {
     if (!walletAddress) return;
 
     const fetchBalances = async () => {
       setLoadingBalances(true);
       try {
-        // Fetch native GYDS balance
         const native = await fetchNativeBalance(walletAddress);
         setNativeBalance(native);
-
-        // Fetch custom token balances
         if (customTokens.length > 0) {
           const balances = await fetchAllTokenBalances(customTokens, walletAddress);
           setTokenBalances(balances);
@@ -67,36 +53,27 @@ const AssetsList = () => {
     return () => clearInterval(interval);
   }, [walletAddress, refreshKey, customTokens.length]);
 
-  const handleConnect = async () => {
-    const addr = await connectWallet();
-    if (addr) setWalletAddress(addr);
-  };
-
-  // Build real asset list from wallet data only
   const allAssets = [
-    // Native GYDS
     {
       symbol: "GYDS",
       name: "GYDS Network",
       price: "—",
       change: "—",
       up: true,
-      amount: walletAddress ? nativeBalance : "—",
-      value: walletAddress ? `${nativeBalance} GYDS` : "Connect wallet",
+      amount: nativeBalance,
+      value: `${nativeBalance} GYDS`,
       color: "from-cyan-400 to-teal-500",
     },
-    // GYD (would need contract address to fetch balance)
     {
       symbol: "GYD",
       name: "GYD Stablecoin",
       price: "—",
       change: "—",
       up: true,
-      amount: walletAddress ? "0" : "—",
-      value: walletAddress ? "0 GYD" : "Connect wallet",
+      amount: "0",
+      value: "0 GYD",
       color: "from-sky-400 to-cyan-500",
     },
-    // Custom imported tokens with live data
     ...customTokens.map((t: CustomToken) => {
       const priceData = prices[t.symbol.toUpperCase()];
       const balance = tokenBalances[t.symbol] || "0";
@@ -110,12 +87,10 @@ const AssetsList = () => {
         price: priceData ? formatPrice(priceData.usd) : "—",
         change: changeInfo.text,
         up: changeInfo.up,
-        amount: walletAddress ? balance : "—",
-        value: walletAddress
-          ? priceData && usdValue > 0
-            ? `$${usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            : `${balance} ${t.symbol}`
-          : "Connect wallet",
+        amount: balance,
+        value: priceData && usdValue > 0
+          ? `$${usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : `${balance} ${t.symbol}`,
         color: t.color,
       };
     }),
@@ -123,19 +98,6 @@ const AssetsList = () => {
 
   return (
     <div>
-      {/* Wallet connection banner */}
-      {!walletAddress && (
-        <motion.button
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          onClick={handleConnect}
-          className="w-full flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-xl py-2.5 mb-4 text-sm font-medium hover:bg-primary/20 transition-colors"
-        >
-          <Wallet size={16} />
-          Connect wallet to view balances
-        </motion.button>
-      )}
-
       {walletAddress && (
         <div className="flex items-center gap-2 mb-4 px-1">
           <div className="w-2 h-2 rounded-full bg-[hsl(var(--success))]" />
