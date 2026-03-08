@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Loader2 } from "lucide-react";
 import { getCustomTokens, type CustomToken } from "@/lib/custom-tokens";
 import { TokenManager } from "@/components/wallet/ImportToken";
+import { fetchAllTokenBalances, getConnectedWallet, connectWallet } from "@/lib/balance-fetcher";
 
 const DEFAULT_ASSETS = [
   { symbol: "BTC", name: "Bitcoin", price: "$67,432.10", change: "+3.2%", up: true, amount: "0.2145", value: "$14,464.59", color: "from-amber-500 to-orange-500" },
@@ -15,7 +16,41 @@ const DEFAULT_ASSETS = [
 
 const AssetsList = () => {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({});
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [loadingBalances, setLoadingBalances] = useState(false);
   const customTokens = getCustomTokens();
+
+  // Try to get connected wallet on mount
+  useEffect(() => {
+    getConnectedWallet().then(setWalletAddress);
+  }, []);
+
+  // Fetch balances when wallet is connected and tokens change
+  useEffect(() => {
+    if (!walletAddress || customTokens.length === 0) return;
+
+    const fetchBalances = async () => {
+      setLoadingBalances(true);
+      try {
+        const balances = await fetchAllTokenBalances(customTokens, walletAddress);
+        setTokenBalances(balances);
+      } catch {
+        // silent
+      } finally {
+        setLoadingBalances(false);
+      }
+    };
+
+    fetchBalances();
+    const interval = setInterval(fetchBalances, 30000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, [walletAddress, refreshKey, customTokens.length]);
+
+  const handleConnect = async () => {
+    const addr = await connectWallet();
+    if (addr) setWalletAddress(addr);
+  };
 
   const customAssets = customTokens.map((t: CustomToken) => ({
     symbol: t.symbol,
@@ -23,8 +58,8 @@ const AssetsList = () => {
     price: "—",
     change: "0.0%",
     up: true,
-    amount: "0",
-    value: "$0.00",
+    amount: tokenBalances[t.symbol] || "0",
+    value: tokenBalances[t.symbol] ? `${tokenBalances[t.symbol]} ${t.symbol}` : "—",
     color: t.color,
   }));
 
@@ -32,6 +67,29 @@ const AssetsList = () => {
 
   return (
     <div>
+      {/* Wallet connection banner for balance fetching */}
+      {!walletAddress && customTokens.length > 0 && (
+        <motion.button
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={handleConnect}
+          className="w-full flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-xl py-2.5 mb-4 text-sm font-medium hover:bg-primary/20 transition-colors"
+        >
+          <Wallet size={16} />
+          Connect wallet to fetch token balances
+        </motion.button>
+      )}
+
+      {walletAddress && (
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <div className="w-2 h-2 rounded-full bg-[hsl(var(--success))]" />
+          <span className="text-xs text-muted-foreground truncate">
+            {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+          </span>
+          {loadingBalances && <Loader2 size={12} className="text-muted-foreground animate-spin" />}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-display font-semibold text-foreground">Your Assets</h2>
         <button className="text-sm text-muted-foreground hover:text-primary transition-colors">See All</button>
@@ -71,7 +129,10 @@ const AssetsList = () => {
         ))}
       </div>
 
-      <TokenManager onTokensChanged={() => setRefreshKey((k) => k + 1)} />
+      <TokenManager
+        onTokensChanged={() => setRefreshKey((k) => k + 1)}
+        balances={tokenBalances}
+      />
     </div>
   );
 };
