@@ -3,7 +3,10 @@ import { motion } from "framer-motion";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { getBalanceHistory, type BalanceSnapshot } from "@/lib/wallet-core";
+import { getBalanceHistory, saveBalanceSnapshot, getWalletAddress, type BalanceSnapshot } from "@/lib/wallet-core";
+import { fetchNativeBalance, fetchAllTokenBalances } from "@/lib/balance-fetcher";
+import { getCustomTokens } from "@/lib/custom-tokens";
+import { fetchPrices } from "@/lib/price-fetcher";
 
 const TIMEFRAMES = ["1D", "1W", "1M", "3M", "1Y", "ALL"] as const;
 
@@ -22,7 +25,6 @@ const filterByTimeframe = (history: BalanceSnapshot[], tf: string): { label: str
   const filtered = history.filter((s) => s.timestamp >= cutoff);
 
   if (filtered.length === 0) {
-    // Show a single zero point if no history
     return [{ label: "Now", value: 0 }];
   }
 
@@ -58,6 +60,40 @@ const PortfolioChart = () => {
   const [timeframe, setTimeframe] = useState<string>("1M");
   const [history, setHistory] = useState<BalanceSnapshot[]>([]);
 
+  // Fetch current balance immediately and save snapshot
+  useEffect(() => {
+    const wallet = getWalletAddress();
+    if (!wallet) return;
+
+    const captureBalance = async () => {
+      try {
+        const customTokens = getCustomTokens();
+        const tokenBals = customTokens.length > 0
+          ? await fetchAllTokenBalances(customTokens, wallet)
+          : {};
+        const symbols = customTokens.map((t) => t.symbol);
+        const prices = await fetchPrices(symbols);
+
+        let total = 0;
+        for (const t of customTokens) {
+          const bal = parseFloat((tokenBals[t.symbol] || "0").replace(/,/g, "")) || 0;
+          const price = prices[t.symbol.toUpperCase()]?.usd || 0;
+          total += bal * price;
+        }
+
+        saveBalanceSnapshot(total);
+        setHistory(getBalanceHistory());
+      } catch {
+        setHistory(getBalanceHistory());
+      }
+    };
+
+    captureBalance();
+    const interval = setInterval(captureBalance, 300000); // every 5 min
+    return () => clearInterval(interval);
+  }, []);
+
+  // Also refresh displayed history
   useEffect(() => {
     setHistory(getBalanceHistory());
     const interval = setInterval(() => setHistory(getBalanceHistory()), 60000);
@@ -111,7 +147,7 @@ const PortfolioChart = () => {
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
             <p className="text-sm">No portfolio data yet</p>
-            <p className="text-xs mt-1">Balance history will appear here over time</p>
+            <p className="text-xs mt-1">Balance snapshots are captured every 5 minutes</p>
           </div>
         )}
       </div>

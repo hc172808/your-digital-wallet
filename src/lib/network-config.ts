@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export interface NetworkConfig {
   name: string;
   symbol: string;
@@ -7,6 +9,10 @@ export interface NetworkConfig {
   blockExplorer: string;
   rpcUrls: string[];
 }
+
+// Validation schemas for admin inputs
+const rpcUrlSchema = z.string().url("Invalid URL").max(200);
+const networkNameSchema = z.string().trim().min(1).max(50);
 
 const DEFAULT_RPC_URLS = [
   "https://rpc.netlifegy.com",
@@ -18,6 +24,7 @@ const DEFAULT_RPC_URLS = [
 
 const STORAGE_KEY = "gyds_network_config";
 const ADMIN_KEY = "gyds_admin_hash";
+const ADMIN_SALT_KEY = "gyds_admin_salt";
 
 export const getDefaultNetwork = (): NetworkConfig => ({
   name: "GYDS Network",
@@ -43,16 +50,37 @@ export const getNetworkConfig = (): NetworkConfig => {
 };
 
 export const saveNetworkConfig = (config: NetworkConfig): void => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  // Validate RPC URLs before saving
+  const validUrls = config.rpcUrls.filter((url) => {
+    try { rpcUrlSchema.parse(url); return true; } catch { return false; }
+  });
+  if (validUrls.length === 0) throw new Error("Must have at least one valid RPC URL");
+  
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...config, rpcUrls: validUrls }));
 };
 
-// Simple hash for admin password (not cryptographically secure, but sufficient for localStorage-based admin)
-const hashPassword = async (password: string): Promise<string> => {
+export const validateRpcUrl = (url: string): boolean => {
+  try { rpcUrlSchema.parse(url); return true; } catch { return false; }
+};
+
+// Salted password hashing with PBKDF2 for admin
+const generateSalt = (): string => {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array).map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+
+const hashPasswordWithSalt = async (password: string, salt: string): Promise<string> => {
   const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: encoder.encode(salt), iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    256
+  );
+  return Array.from(new Uint8Array(derivedBits)).map((b) => b.toString(16).padStart(2, "0")).join("");
 };
 
 export const isAdminSetup = (): boolean => {
@@ -60,15 +88,25 @@ export const isAdminSetup = (): boolean => {
 };
 
 export const setupAdmin = async (password: string): Promise<void> => {
-  const hash = await hashPassword(password);
+  if (password.length < 8) throw new Error("Password must be at least 8 characters");
+  const salt = generateSalt();
+  const hash = await hashPasswordWithSalt(password, salt);
+  localStorage.setItem(ADMIN_SALT_KEY, salt);
   localStorage.setItem(ADMIN_KEY, hash);
 };
 
 export const verifyAdmin = async (password: string): Promise<boolean> => {
   const storedHash = localStorage.getItem(ADMIN_KEY);
-  if (!storedHash) return false;
-  const hash = await hashPassword(password);
-  return hash === storedHash;
+  const salt = localStorage.getItem(ADMIN_SALT_KEY);
+  if (!storedHash || !salt) return false;
+  const hash = await hashPasswordWithSalt(password, salt);
+  // Constant-time comparison
+  if (hash.length !== storedHash.length) return false;
+  let result = 0;
+  for (let i = 0; i < hash.length; i++) {
+    result |= hash.charCodeAt(i) ^ storedHash.charCodeAt(i);
+  }
+  return result === 0;
 };
 
 export const getActiveRpc = async (): Promise<string | null> => {
@@ -89,7 +127,7 @@ export const getActiveRpc = async (): Promise<string | null> => {
       continue;
     }
   }
-  return config.rpcUrls[0]; // fallback to primary
+  return config.rpcUrls[0];
 };
 
-export const APP_VERSION = "1.2.0";
+export const APP_VERSION = "1.3.0";
