@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import BottomNav from "@/components/wallet/BottomNav";
 import { getNetworkConfig, getActiveRpc } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
-import { getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction } from "@/lib/wallet-core";
+import { getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction, checkLockout, addressSchema, amountSchema } from "@/lib/wallet-core";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_TOKENS = [
