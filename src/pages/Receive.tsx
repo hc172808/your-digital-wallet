@@ -104,7 +104,7 @@ const Receive = () => {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Send <span className="text-primary font-semibold">GYDS</span>, <span className="text-primary font-semibold">GYD</span>, or any ERC-20 token on {config.networkName} to this address.
+            Send <span className="text-primary font-semibold">GYDS</span>, <span className="text-primary font-semibold">GYD</span>, or any ERC-20 token on {config.name} to this address.
           </p>
         </motion.div>
       </div>
