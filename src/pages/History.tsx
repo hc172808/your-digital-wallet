@@ -1,15 +1,11 @@
-import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownLeft, Repeat, Filter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowUpRight, ArrowDownLeft, Repeat, Filter, ExternalLink, Inbox } from "lucide-react";
 import BottomNav from "@/components/wallet/BottomNav";
+import { getTransactionHistory, formatTxDate, formatTxTime, shortAddress, type Transaction } from "@/lib/transaction-history";
+import { getNetworkConfig } from "@/lib/network-config";
 
-const HISTORY = [
-  { type: "sent", label: "Sent BTC", detail: "To 0x4f2...8a1c", amount: "-0.015 BTC", usd: "-$1,011.48", date: "Mar 4, 2026", time: "2:34 PM" },
-  { type: "received", label: "Received ETH", detail: "From 0x8b3...2e7d", amount: "+0.5 ETH", usd: "+$1,760.70", date: "Mar 4, 2026", time: "9:15 AM" },
-  { type: "swap", label: "Swap SOL → USDT", detail: "Via DEX", amount: "2.0 SOL", usd: "$357.80", date: "Mar 3, 2026", time: "6:22 PM" },
-  { type: "received", label: "Received USDT", detail: "From 0xa1c...9f3b", amount: "+500 USDT", usd: "+$500.00", date: "Mar 2, 2026", time: "11:00 AM" },
-  { type: "sent", label: "Sent ETH", detail: "To 0x7d1...3c8e", amount: "-0.25 ETH", usd: "-$880.35", date: "Mar 1, 2026", time: "3:45 PM" },
-  { type: "received", label: "Received BTC", detail: "From 0xf2a...1b4d", amount: "+0.05 BTC", usd: "+$3,371.60", date: "Feb 28, 2026", time: "8:30 AM" },
-];
+type FilterType = "all" | "sent" | "received" | "swap";
 
 const iconMap = {
   sent: <ArrowUpRight size={16} />,
@@ -19,46 +15,149 @@ const iconMap = {
 
 const colorMap = {
   sent: "bg-destructive/20 text-destructive",
-  received: "bg-success/20 text-success",
-  swap: "gradient-purple text-foreground",
+  received: "bg-[hsl(var(--success))]/20 text-[hsl(var(--success))]",
+  swap: "bg-primary/20 text-primary",
 };
 
 const History = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [showFilter, setShowFilter] = useState(false);
+  const config = getNetworkConfig();
+
+  useEffect(() => {
+    setTransactions(getTransactionHistory());
+    // Refresh every 30s
+    const interval = setInterval(() => setTransactions(getTransactionHistory()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const filtered = filter === "all" ? transactions : transactions.filter((tx) => tx.type === filter);
+
+  // Group by date
+  const grouped = filtered.reduce<Record<string, Transaction[]>>((acc, tx) => {
+    const date = formatTxDate(tx.timestamp);
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(tx);
+    return acc;
+  }, {});
+
+  const filterOptions: { value: FilterType; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "sent", label: "Sent" },
+    { value: "received", label: "Received" },
+    { value: "swap", label: "Swaps" },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="max-w-lg mx-auto px-4 pt-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-display font-bold text-foreground">Transaction History</h1>
-          <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+          <button
+            onClick={() => setShowFilter(!showFilter)}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+              showFilter ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
+            }`}
+          >
             <Filter size={18} />
           </button>
         </div>
 
-        <div className="space-y-2">
-          {HISTORY.map((tx, i) => (
+        {/* Filter chips */}
+        <AnimatePresence>
+          {showFilter && (
             <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06, duration: 0.3 }}
-              className="flex items-center gap-3 p-4 bg-card rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mb-4"
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${colorMap[tx.type as keyof typeof colorMap]}`}>
-                {iconMap[tx.type as keyof typeof iconMap]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">{tx.label}</p>
-                <p className="text-xs text-muted-foreground">{tx.detail} · {tx.time}</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-sm font-semibold ${tx.type === "received" ? "text-success" : tx.type === "sent" ? "text-destructive" : "text-foreground"}`}>
-                  {tx.amount}
-                </p>
-                <p className="text-xs text-muted-foreground">{tx.date}</p>
+              <div className="flex gap-2">
+                {filterOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setFilter(opt.value)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      filter === opt.value
+                        ? "gradient-primary text-primary-foreground"
+                        : "bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </motion.div>
-          ))}
-        </div>
+          )}
+        </AnimatePresence>
+
+        {filtered.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-20 text-center"
+          >
+            <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center mb-4">
+              <Inbox size={28} className="text-muted-foreground" />
+            </div>
+            <p className="text-foreground font-semibold mb-1">No transactions yet</p>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              Your sent and received transactions will appear here once you make your first transfer.
+            </p>
+          </motion.div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(grouped).map(([date, txs]) => (
+              <div key={date}>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{date}</p>
+                <div className="space-y-2">
+                  {txs.map((tx, i) => (
+                    <motion.a
+                      key={tx.id}
+                      href={`${config.blockExplorer}/tx/${tx.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.3 }}
+                      className="flex items-center gap-3 p-4 bg-card rounded-xl hover:bg-secondary/50 transition-colors group"
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${colorMap[tx.type]}`}>
+                        {iconMap[tx.type]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-foreground">
+                            {tx.type === "sent" ? "Sent" : tx.type === "received" ? "Received" : "Swapped"} {tx.symbol}
+                          </p>
+                          <ExternalLink size={12} className="text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors" />
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {tx.type === "sent" ? `To ${shortAddress(tx.toAddress || "")}` : `From ${shortAddress(tx.fromAddress || "")}`}
+                          {" · "}
+                          {formatTxTime(tx.timestamp)}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`text-sm font-semibold ${
+                          tx.type === "received" ? "text-[hsl(var(--success))]" : tx.type === "sent" ? "text-destructive" : "text-foreground"
+                        }`}>
+                          {tx.type === "sent" ? "-" : tx.type === "received" ? "+" : ""}{tx.amount} {tx.symbol}
+                        </p>
+                        <p className={`text-[10px] font-medium ${
+                          tx.status === "confirmed" ? "text-[hsl(var(--success))]" : tx.status === "pending" ? "text-yellow-500" : "text-destructive"
+                        }`}>
+                          {tx.status}
+                        </p>
+                      </div>
+                    </motion.a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <BottomNav />
     </div>

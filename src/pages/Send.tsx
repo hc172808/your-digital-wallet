@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowUpRight, QrCode, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/wallet/BottomNav";
+import QrScanner from "@/components/wallet/QrScanner";
 import { getNetworkConfig, getActiveRpc } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
 import { getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction, checkLockout, addressSchema, amountSchema } from "@/lib/wallet-core";
+import { saveTransaction } from "@/lib/transaction-history";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_TOKENS = [
@@ -22,6 +24,7 @@ const Send = () => {
   const [sending, setSending] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const { toast } = useToast();
   const config = getNetworkConfig();
   const wallet = getWalletAddress();
@@ -32,6 +35,11 @@ const Send = () => {
     ...customTokens.map((t) => ({ symbol: t.symbol, name: t.name, contractAddress: t.contractAddress, decimals: t.decimals })),
   ];
 
+  const handleScanResult = useCallback((scannedAddress: string) => {
+    setAddress(scannedAddress);
+    toast({ title: "Address scanned!", description: scannedAddress.slice(0, 16) + "..." });
+  }, [toast]);
+
   const handleSend = async () => {
     setTxError(null);
     setTxHash(null);
@@ -41,7 +49,6 @@ const Send = () => {
       return;
     }
 
-    // Validate inputs with zod
     try { addressSchema.parse(address); } catch {
       toast({ title: "Invalid recipient address", variant: "destructive" });
       return;
@@ -55,7 +62,6 @@ const Send = () => {
       return;
     }
 
-    // Check lockout
     const lockStatus = checkLockout();
     if (lockStatus.locked) {
       toast({ title: `Wallet locked for ${lockStatus.remainingSeconds}s`, description: "Too many failed attempts", variant: "destructive" });
@@ -75,6 +81,19 @@ const Send = () => {
         hash = await sendERC20Transaction(unlockedWallet, selectedToken.contractAddress, address, amount, selectedToken.decimals, rpc);
       }
       setTxHash(hash);
+
+      // Save to transaction history
+      saveTransaction({
+        type: "sent",
+        symbol: selectedToken.symbol,
+        amount,
+        toAddress: address,
+        fromAddress: wallet,
+        txHash: hash,
+        timestamp: Date.now(),
+        status: "confirmed",
+      });
+
       toast({ title: "Transaction sent!", description: `TX: ${hash.slice(0, 10)}...` });
     } catch (err: any) {
       const msg = err?.message || "Transaction failed";
@@ -156,7 +175,10 @@ const Send = () => {
                 onChange={(e) => setAddress(e.target.value)}
                 className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
               />
-              <button className="text-muted-foreground hover:text-primary transition-colors">
+              <button
+                onClick={() => setScannerOpen(true)}
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
                 <QrCode size={20} />
               </button>
             </div>
@@ -213,6 +235,14 @@ const Send = () => {
           </button>
         </motion.div>
       </div>
+
+      {/* QR Scanner Modal */}
+      <QrScanner
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleScanResult}
+      />
+
       <BottomNav />
     </div>
   );
