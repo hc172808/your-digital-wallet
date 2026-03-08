@@ -11,6 +11,7 @@ import History from "./pages/History";
 import Settings from "./pages/Settings";
 import Network from "./pages/Network";
 import Admin from "./pages/Admin";
+import TokenDetail from "./pages/TokenDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
