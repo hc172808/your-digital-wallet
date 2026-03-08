@@ -1,69 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { getBalanceHistory, type BalanceSnapshot } from "@/lib/wallet-core";
 
 const TIMEFRAMES = ["1D", "1W", "1M", "3M", "1Y", "ALL"] as const;
 
-const generateData = (timeframe: string) => {
-  const points: { label: string; value: number }[] = [];
-  let count = 24;
-  let base = 22000;
+const filterByTimeframe = (history: BalanceSnapshot[], tf: string): { label: string; value: number }[] => {
+  const now = Date.now();
+  const ranges: Record<string, number> = {
+    "1D": 86400000,
+    "1W": 604800000,
+    "1M": 2592000000,
+    "3M": 7776000000,
+    "1Y": 31536000000,
+    "ALL": Infinity,
+  };
 
-  switch (timeframe) {
-    case "1D":
-      count = 24;
-      base = 24000;
-      for (let i = 0; i < count; i++) {
-        points.push({ label: `${i}:00`, value: base + Math.sin(i * 0.5) * 800 + Math.random() * 300 });
-      }
-      break;
-    case "1W":
-      count = 7;
-      base = 23000;
-      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      for (let i = 0; i < count; i++) {
-        points.push({ label: days[i], value: base + i * 200 + Math.random() * 500 });
-      }
-      break;
-    case "1M":
-      count = 30;
-      base = 20000;
-      for (let i = 1; i <= count; i++) {
-        points.push({ label: `${i}`, value: base + i * 120 + Math.random() * 600 });
-      }
-      break;
-    case "3M":
-      count = 12;
-      base = 18000;
-      for (let i = 0; i < count; i++) {
-        points.push({ label: `W${i + 1}`, value: base + i * 500 + Math.random() * 800 });
-      }
-      break;
-    case "1Y":
-      count = 12;
-      base = 14000;
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      for (let i = 0; i < count; i++) {
-        points.push({ label: months[i], value: base + i * 900 + Math.random() * 1000 });
-      }
-      break;
-    case "ALL":
-      count = 8;
-      base = 5000;
-      for (let i = 0; i < count; i++) {
-        points.push({ label: `${2017 + i}`, value: base + i * 2500 + Math.random() * 2000 });
-      }
-      break;
+  const cutoff = ranges[tf] === Infinity ? 0 : now - ranges[tf];
+  const filtered = history.filter((s) => s.timestamp >= cutoff);
+
+  if (filtered.length === 0) {
+    // Show a single zero point if no history
+    return [{ label: "Now", value: 0 }];
   }
-  return points;
+
+  return filtered.map((s) => {
+    const d = new Date(s.timestamp);
+    let label: string;
+    if (tf === "1D") {
+      label = d.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" });
+    } else if (tf === "1W" || tf === "1M") {
+      label = d.toLocaleDateString("en", { month: "short", day: "numeric" });
+    } else {
+      label = d.toLocaleDateString("en", { month: "short", year: "2-digit" });
+    }
+    return { label, value: parseFloat(s.usd.toFixed(2)) };
+  });
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -82,7 +56,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const PortfolioChart = () => {
   const [timeframe, setTimeframe] = useState<string>("1M");
-  const data = generateData(timeframe);
+  const [history, setHistory] = useState<BalanceSnapshot[]>([]);
+
+  useEffect(() => {
+    setHistory(getBalanceHistory());
+    const interval = setInterval(() => setHistory(getBalanceHistory()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const data = filterByTimeframe(history, timeframe);
+  const hasData = data.length > 1 || (data.length === 1 && data[0].value > 0);
 
   return (
     <motion.div
@@ -109,38 +92,28 @@ const PortfolioChart = () => {
         </div>
       </div>
       <div className="bg-card rounded-xl p-4 h-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(160, 84%, 50%)" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="hsl(160, 84%, 50%)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 10, fill: "hsl(220, 10%, 55%)" }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 10, fill: "hsl(220, 10%, 55%)" }}
-              tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke="hsl(160, 84%, 50%)"
-              strokeWidth={2}
-              fill="url(#portfolioGradient)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {hasData ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(160, 84%, 50%)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="hsl(160, 84%, 50%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(220, 10%, 55%)" }} interval="preserveStartEnd" />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(220, 10%, 55%)" }} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="value" stroke="hsl(160, 84%, 50%)" strokeWidth={2} fill="url(#portfolioGradient)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+            <p className="text-sm">No portfolio data yet</p>
+            <p className="text-xs mt-1">Balance history will appear here over time</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

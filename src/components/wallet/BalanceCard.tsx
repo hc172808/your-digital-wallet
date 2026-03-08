@@ -1,50 +1,39 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Wallet } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getConnectedWallet, connectWallet, fetchNativeBalance } from "@/lib/balance-fetcher";
+import { getWalletAddress } from "@/lib/wallet-core";
+import { fetchNativeBalance, fetchAllTokenBalances } from "@/lib/balance-fetcher";
 import { getCustomTokens } from "@/lib/custom-tokens";
-import { fetchAllTokenBalances } from "@/lib/balance-fetcher";
 import { fetchPrices } from "@/lib/price-fetcher";
+import { saveBalanceSnapshot } from "@/lib/wallet-core";
 
 const BalanceCard = () => {
   const [visible, setVisible] = useState(true);
-  const [wallet, setWallet] = useState<string | null>(null);
   const [totalUsd, setTotalUsd] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
+  const wallet = getWalletAddress();
 
   useEffect(() => {
-    getConnectedWallet().then(setWallet);
-  }, []);
-
-  useEffect(() => {
-    if (!wallet) { setTotalUsd(0); return; }
+    if (!wallet) return;
 
     const calc = async () => {
-      setLoading(true);
       try {
-        const nativeBal = await fetchNativeBalance(wallet);
         const customTokens = getCustomTokens();
         const tokenBals = customTokens.length > 0
           ? await fetchAllTokenBalances(customTokens, wallet)
           : {};
-
-        // Fetch prices for custom tokens
         const symbols = customTokens.map((t) => t.symbol);
         const prices = await fetchPrices(symbols);
 
         let total = 0;
-        // Native GYDS — no CoinGecko price, skip USD
-        // Custom tokens with prices
         for (const t of customTokens) {
           const bal = parseFloat((tokenBals[t.symbol] || "0").replace(/,/g, "")) || 0;
           const price = prices[t.symbol.toUpperCase()]?.usd || 0;
           total += bal * price;
         }
         setTotalUsd(total);
+        saveBalanceSnapshot(total);
       } catch {
         // silent
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -52,11 +41,6 @@ const BalanceCard = () => {
     const interval = setInterval(calc, 60000);
     return () => clearInterval(interval);
   }, [wallet]);
-
-  const handleConnect = async () => {
-    const addr = await connectWallet();
-    if (addr) setWallet(addr);
-  };
 
   const formattedBalance = totalUsd > 0
     ? `$${totalUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -69,7 +53,6 @@ const BalanceCard = () => {
       transition={{ duration: 0.5 }}
       className="gradient-primary rounded-2xl p-6 glow-primary relative overflow-hidden"
     >
-      {/* Decorative circles */}
       <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-foreground/5" />
       <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-foreground/5" />
 
@@ -81,20 +64,12 @@ const BalanceCard = () => {
           </button>
         </div>
         <h1 className="text-4xl font-display font-bold text-primary-foreground mb-1">
-          {!wallet ? "—" : visible ? formattedBalance : "••••••"}
+          {visible ? formattedBalance : "••••••"}
         </h1>
-        {wallet ? (
+        {wallet && (
           <p className="text-xs text-primary-foreground/50 mb-6">
             {wallet.slice(0, 6)}...{wallet.slice(-4)}
           </p>
-        ) : (
-          <button
-            onClick={handleConnect}
-            className="flex items-center gap-1.5 text-sm text-primary-foreground/80 hover:text-primary-foreground mb-6 transition-colors"
-          >
-            <Wallet size={14} />
-            Connect wallet
-          </button>
         )}
 
         <div className="flex gap-3">
