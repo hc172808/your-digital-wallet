@@ -9,6 +9,7 @@ import { getCustomTokens } from "@/lib/custom-tokens";
 import { getConnectedWallet, fetchNativeBalance, fetchTokenBalance } from "@/lib/balance-fetcher";
 import { fetchPrices, fetchPriceHistory, formatPrice, formatChange, getCoinGeckoId, type PriceHistoryPoint } from "@/lib/price-fetcher";
 import { useToast } from "@/hooks/use-toast";
+import { getWalletAddress } from "@/lib/wallet-core";
 
 interface TokenInfo {
   symbol: string;
