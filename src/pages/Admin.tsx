@@ -9,6 +9,7 @@ import {
   isAdminSetup,
   setupAdmin,
   verifyAdmin,
+  validateRpcUrl,
   APP_VERSION,
   type NetworkConfig,
 } from "@/lib/network-config";
@@ -32,8 +33,8 @@ const Admin = () => {
       return;
     }
     if (!isSetup) {
-      if (password.length < 6) {
-        toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      if (password.length < 8) {
+        toast({ title: "Password must be at least 8 characters", variant: "destructive" });
         return;
       }
       if (password !== confirmPassword) {
@@ -56,10 +57,8 @@ const Admin = () => {
   const handleAddRpc = () => {
     const trimmed = newRpc.trim();
     if (!trimmed) return;
-    try {
-      new URL(trimmed);
-    } catch {
-      toast({ title: "Invalid URL", variant: "destructive" });
+    if (!validateRpcUrl(trimmed)) {
+      toast({ title: "Invalid URL format", variant: "destructive" });
       return;
     }
     if (config.rpcUrls.includes(trimmed)) {
