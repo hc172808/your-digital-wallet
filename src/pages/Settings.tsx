@@ -267,10 +267,16 @@ const Settings = () => {
 
               <div className="mt-6 flex items-center justify-between text-xs text-muted-foreground px-2">
                 <span>v{APP_VERSION}</span>
-                <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
-                  <Globe size={12} />
-                  Network Admin
-                </Link>
+                <div className="flex items-center gap-3">
+                  <Link to="/network" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    <Globe size={12} />
+                    Network
+                  </Link>
+                  <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    <Shield size={12} />
+                    Admin
+                  </Link>
+                </div>
               </div>
             </motion.div>
           )}

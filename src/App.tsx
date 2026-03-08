@@ -9,6 +9,7 @@ import Swap from "./pages/Swap";
 import Receive from "./pages/Receive";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
+import Network from "./pages/Network";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/receive" element={<Receive />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/network" element={<Network />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
