@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Globe, Link2, Server, CheckCircle2, XCircle, Loader2, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Globe, Link2, Server, CheckCircle2, XCircle, Loader2, Copy, ExternalLink, Blocks, Fuel, RefreshCw, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/wallet/BottomNav";
 import { getNetworkConfig, getActiveRpc } from "@/lib/network-config";
@@ -18,10 +18,47 @@ const Network = () => {
     config.rpcUrls.map((url) => ({ url, status: "checking" }))
   );
   const [activeRpc, setActiveRpc] = useState<string | null>(null);
+  const [blockHeight, setBlockHeight] = useState<string | null>(null);
+  const [gasPrice, setGasPrice] = useState<string | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [addingToMetaMask, setAddingToMetaMask] = useState(false);
   const { toast } = useToast();
 
+  const fetchChainStats = useCallback(async (rpcUrl: string) => {
+    setStatsLoading(true);
+    try {
+      const [blockRes, gasRes] = await Promise.all([
+        fetch(rpcUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
+        }),
+        fetch(rpcUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 2 }),
+        }),
+      ]);
+
+      const blockData = await blockRes.json();
+      const gasData = await gasRes.json();
+
+      if (blockData.result) {
+        setBlockHeight(parseInt(blockData.result, 16).toLocaleString());
+      }
+      if (gasData.result) {
+        const gweiValue = parseInt(gasData.result, 16) / 1e9;
+        setGasPrice(gweiValue < 0.01 ? "< 0.01" : gweiValue.toFixed(2));
+      }
+    } catch {
+      setBlockHeight(null);
+      setGasPrice(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    // Check each RPC endpoint
     config.rpcUrls.forEach(async (url, index) => {
       const start = Date.now();
       try {
@@ -49,12 +86,52 @@ const Network = () => {
       }
     });
 
-    getActiveRpc().then(setActiveRpc);
-  }, []);
+    getActiveRpc().then((rpc) => {
+      setActiveRpc(rpc);
+      if (rpc) fetchChainStats(rpc);
+    });
+  }, [fetchChainStats]);
+
+  // Auto-refresh stats every 15s
+  useEffect(() => {
+    if (!activeRpc) return;
+    const interval = setInterval(() => fetchChainStats(activeRpc), 15000);
+    return () => clearInterval(interval);
+  }, [activeRpc, fetchChainStats]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copied to clipboard" });
+  };
+
+  const addToMetaMask = async () => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) {
+      toast({ title: "MetaMask not detected", description: "Install MetaMask to add this network.", variant: "destructive" });
+      return;
+    }
+    setAddingToMetaMask(true);
+    try {
+      await ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: config.chainIdHex,
+          chainName: config.name,
+          nativeCurrency: { name: config.name, symbol: config.symbol, decimals: config.decimals },
+          rpcUrls: [config.rpcUrls[0]],
+          blockExplorerUrls: [config.blockExplorer],
+        }],
+      });
+      toast({ title: "Network added!", description: `${config.name} has been added to MetaMask.` });
+    } catch (err: any) {
+      if (err.code === 4001) {
+        toast({ title: "Cancelled", description: "You rejected the request." });
+      } else {
+        toast({ title: "Failed to add network", description: err.message, variant: "destructive" });
+      }
+    } finally {
+      setAddingToMetaMask(false);
+    }
   };
 
   const details = [
@@ -87,6 +164,58 @@ const Network = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Live Chain Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="grid grid-cols-2 gap-3 mb-4"
+        >
+          <div className="bg-card rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Blocks size={16} className="text-primary" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Block Height</span>
+            </div>
+            {statsLoading ? (
+              <Loader2 size={18} className="text-muted-foreground animate-spin" />
+            ) : blockHeight ? (
+              <p className="text-lg font-display font-bold text-foreground">{blockHeight}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Unavailable</p>
+            )}
+          </div>
+          <div className="bg-card rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Fuel size={16} className="text-accent" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Gas Price</span>
+            </div>
+            {statsLoading ? (
+              <Loader2 size={18} className="text-muted-foreground animate-spin" />
+            ) : gasPrice ? (
+              <p className="text-lg font-display font-bold text-foreground">{gasPrice} <span className="text-xs text-muted-foreground font-normal">Gwei</span></p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Unavailable</p>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Add to MetaMask */}
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          onClick={addToMetaMask}
+          disabled={addingToMetaMask}
+          className="w-full flex items-center justify-center gap-3 gradient-primary text-primary-foreground font-display font-bold py-3.5 rounded-2xl mb-4 hover:opacity-90 transition-opacity glow-primary disabled:opacity-60"
+        >
+          {addingToMetaMask ? (
+            <Loader2 size={20} className="animate-spin" />
+          ) : (
+            <Wallet size={20} />
+          )}
+          Add to MetaMask
+        </motion.button>
 
         {/* Chain Details */}
         <motion.div
@@ -136,9 +265,19 @@ const Network = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">
-            RPC Endpoints
-          </h2>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              RPC Endpoints
+            </h2>
+            <button
+              onClick={() => {
+                if (activeRpc) fetchChainStats(activeRpc);
+              }}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
           <div className="space-y-2">
             {rpcStatuses.map((rpc, i) => (
               <motion.div
