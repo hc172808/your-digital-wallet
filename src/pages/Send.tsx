@@ -40,16 +40,25 @@ const Send = () => {
       toast({ title: "No wallet found", variant: "destructive" });
       return;
     }
-    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+
+    // Validate inputs with zod
+    try { addressSchema.parse(address); } catch {
       toast({ title: "Invalid recipient address", variant: "destructive" });
       return;
     }
-    if (!amount || parseFloat(amount) <= 0) {
+    try { amountSchema.parse(amount); } catch {
       toast({ title: "Enter a valid amount", variant: "destructive" });
       return;
     }
     if (!password) {
       toast({ title: "Enter your wallet password", variant: "destructive" });
+      return;
+    }
+
+    // Check lockout
+    const lockStatus = checkLockout();
+    if (lockStatus.locked) {
+      toast({ title: `Wallet locked for ${lockStatus.remainingSeconds}s`, description: "Too many failed attempts", variant: "destructive" });
       return;
     }
 
