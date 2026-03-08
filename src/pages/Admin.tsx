@@ -57,10 +57,8 @@ const Admin = () => {
   const handleAddRpc = () => {
     const trimmed = newRpc.trim();
     if (!trimmed) return;
-    try {
-      new URL(trimmed);
-    } catch {
-      toast({ title: "Invalid URL", variant: "destructive" });
+    if (!validateRpcUrl(trimmed)) {
+      toast({ title: "Invalid URL format", variant: "destructive" });
       return;
     }
     if (config.rpcUrls.includes(trimmed)) {
