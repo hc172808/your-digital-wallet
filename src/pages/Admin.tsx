@@ -9,6 +9,7 @@ import {
   isAdminSetup,
   setupAdmin,
   verifyAdmin,
+  validateRpcUrl,
   APP_VERSION,
   type NetworkConfig,
 } from "@/lib/network-config";
