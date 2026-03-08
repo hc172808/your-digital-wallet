@@ -47,7 +47,8 @@ const Send = () => {
         });
       } catch (switchError: any) {
         if (switchError.code === 4902) {
-          await ethereum.request({
+          const eth = (window as any).ethereum;
+          await eth.request({
             method: "wallet_addEthereumChain",
             params: [{
               chainId: config.chainIdHex,
