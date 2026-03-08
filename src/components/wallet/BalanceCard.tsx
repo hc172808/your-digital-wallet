@@ -1,9 +1,66 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Wallet } from "lucide-react";
+import { useState, useEffect } from "react";
+import { getConnectedWallet, connectWallet, fetchNativeBalance } from "@/lib/balance-fetcher";
+import { getCustomTokens } from "@/lib/custom-tokens";
+import { fetchAllTokenBalances } from "@/lib/balance-fetcher";
+import { fetchPrices } from "@/lib/price-fetcher";
 
 const BalanceCard = () => {
   const [visible, setVisible] = useState(true);
+  const [wallet, setWallet] = useState<string | null>(null);
+  const [totalUsd, setTotalUsd] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getConnectedWallet().then(setWallet);
+  }, []);
+
+  useEffect(() => {
+    if (!wallet) { setTotalUsd(0); return; }
+
+    const calc = async () => {
+      setLoading(true);
+      try {
+        const nativeBal = await fetchNativeBalance(wallet);
+        const customTokens = getCustomTokens();
+        const tokenBals = customTokens.length > 0
+          ? await fetchAllTokenBalances(customTokens, wallet)
+          : {};
+
+        // Fetch prices for custom tokens
+        const symbols = customTokens.map((t) => t.symbol);
+        const prices = await fetchPrices(symbols);
+
+        let total = 0;
+        // Native GYDS — no CoinGecko price, skip USD
+        // Custom tokens with prices
+        for (const t of customTokens) {
+          const bal = parseFloat((tokenBals[t.symbol] || "0").replace(/,/g, "")) || 0;
+          const price = prices[t.symbol.toUpperCase()]?.usd || 0;
+          total += bal * price;
+        }
+        setTotalUsd(total);
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    calc();
+    const interval = setInterval(calc, 60000);
+    return () => clearInterval(interval);
+  }, [wallet]);
+
+  const handleConnect = async () => {
+    const addr = await connectWallet();
+    if (addr) setWallet(addr);
+  };
+
+  const formattedBalance = totalUsd > 0
+    ? `$${totalUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : "$0.00";
 
   return (
     <motion.div
@@ -24,12 +81,21 @@ const BalanceCard = () => {
           </button>
         </div>
         <h1 className="text-4xl font-display font-bold text-primary-foreground mb-1">
-          {visible ? "$24,521.80" : "••••••"}
+          {!wallet ? "—" : visible ? formattedBalance : "••••••"}
         </h1>
-        <p className="text-sm text-primary-foreground/70 mb-6">
-          {visible ? "+$1,240.50 (5.32%)" : "••••"}{" "}
-          <span className="text-primary-foreground/50">today</span>
-        </p>
+        {wallet ? (
+          <p className="text-xs text-primary-foreground/50 mb-6">
+            {wallet.slice(0, 6)}...{wallet.slice(-4)}
+          </p>
+        ) : (
+          <button
+            onClick={handleConnect}
+            className="flex items-center gap-1.5 text-sm text-primary-foreground/80 hover:text-primary-foreground mb-6 transition-colors"
+          >
+            <Wallet size={14} />
+            Connect wallet
+          </button>
+        )}
 
         <div className="flex gap-3">
           <ActionButton icon={<ArrowUpRight size={18} />} label="Send" href="/send" />

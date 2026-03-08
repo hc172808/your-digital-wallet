@@ -1,92 +1,50 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, Copy, ArrowUpRight, ArrowDownLeft, ArrowDownUp, Coins, Hash, FileText, Clock } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, Copy, ArrowUpRight, ArrowDownLeft, ArrowDownUp, Coins, Hash, FileText, Clock, Loader2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import BottomNav from "@/components/wallet/BottomNav";
 import { getNetworkConfig } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
+import { getConnectedWallet, fetchNativeBalance, fetchTokenBalance } from "@/lib/balance-fetcher";
+import { fetchPrices, fetchPriceHistory, formatPrice, formatChange, getCoinGeckoId, type PriceHistoryPoint } from "@/lib/price-fetcher";
 import { useToast } from "@/hooks/use-toast";
 
 interface TokenInfo {
   symbol: string;
   name: string;
-  price: string;
-  priceNum: number;
-  change: string;
-  up: boolean;
-  amount: string;
-  value: string;
   color: string;
   contractAddress?: string;
   decimals: number;
   description: string;
 }
 
-const DEFAULT_TOKENS: Record<string, TokenInfo> = {
-  BTC: { symbol: "BTC", name: "Bitcoin", price: "$67,432.10", priceNum: 67432.1, change: "+3.2%", up: true, amount: "0.2145", value: "$14,464.59", color: "from-amber-500 to-orange-500", decimals: 18, description: "Bitcoin is the first decentralized cryptocurrency. Nodes verify transactions through cryptography and record them in a public ledger called a blockchain." },
-  ETH: { symbol: "ETH", name: "Ethereum", price: "$3,521.40", priceNum: 3521.4, change: "+1.8%", up: true, amount: "1.8320", value: "$6,453.24", color: "from-blue-400 to-indigo-500", decimals: 18, description: "Ethereum is a decentralized platform that enables smart contracts and dApps to be built and run without downtime, fraud, or third-party interference." },
-  SOL: { symbol: "SOL", name: "Solana", price: "$178.90", priceNum: 178.9, change: "-0.5%", up: false, amount: "12.50", value: "$2,236.25", color: "from-purple-500 to-fuchsia-500", decimals: 18, description: "Solana is a high-performance blockchain supporting builders around the world creating crypto apps that scale." },
-  USDT: { symbol: "USDT", name: "Tether", price: "$1.00", priceNum: 1.0, change: "0.0%", up: true, amount: "1,367.72", value: "$1,367.72", color: "from-emerald-400 to-green-500", decimals: 6, description: "Tether (USDT) is a stablecoin pegged to the US Dollar. It provides stability in the volatile cryptocurrency market." },
-  GYDS: { symbol: "GYDS", name: "GYDS Network", price: "$0.15", priceNum: 0.15, change: "+12.4%", up: true, amount: "10,000", value: "$1,500.00", color: "from-cyan-400 to-teal-500", decimals: 18, description: "GYDS is the native token of the GYDS Network (Chain ID: 13370). It powers transactions, gas fees, and governance on the network." },
-  GYD: { symbol: "GYD", name: "GYD Stablecoin", price: "$1.00", priceNum: 1.0, change: "0.0%", up: true, amount: "5,000", value: "$5,000.00", color: "from-sky-400 to-cyan-500", decimals: 18, description: "GYD is a stablecoin on the GYDS Network pegged to 1 USD. Used for payments, transfers, and DeFi applications." },
+const KNOWN_TOKENS: Record<string, TokenInfo> = {
+  GYDS: { symbol: "GYDS", name: "GYDS Network", color: "from-cyan-400 to-teal-500", decimals: 18, description: "GYDS is the native token of the GYDS Network (Chain ID: 13370). It powers transactions, gas fees, and governance on the network." },
+  GYD: { symbol: "GYD", name: "GYD Stablecoin", color: "from-sky-400 to-cyan-500", decimals: 18, description: "GYD is a stablecoin on the GYDS Network pegged to 1 USD. Used for payments, transfers, and DeFi applications." },
 };
 
 type TimeRange = "7D" | "30D" | "1Y";
+const DAYS_MAP: Record<TimeRange, number> = { "7D": 7, "30D": 30, "1Y": 365 };
 
-// Generate mock price history data
-const generatePriceData = (basePrice: number, range: TimeRange, volatile: boolean) => {
-  const points = range === "7D" ? 7 : range === "30D" ? 30 : 365;
-  const volatility = volatile ? 0.05 : 0.002;
-  const data = [];
-  let price = basePrice * (1 - volatility * points * 0.3);
-
+// Fallback: generate synthetic chart data for tokens not on CoinGecko
+const generateFallbackData = (range: TimeRange): PriceHistoryPoint[] => {
+  const points = DAYS_MAP[range];
+  const data: PriceHistoryPoint[] = [];
+  let price = 0.15;
   for (let i = 0; i < points; i++) {
-    const change = (Math.random() - 0.45) * basePrice * volatility;
-    price = Math.max(price + change, basePrice * 0.5);
-    const date = new Date();
-    date.setDate(date.getDate() - (points - i));
+    price += (Math.random() - 0.48) * 0.005;
+    price = Math.max(price, 0.01);
+    const d = new Date();
+    d.setDate(d.getDate() - (points - i));
     data.push({
       date: range === "1Y"
-        ? date.toLocaleDateString("en", { month: "short" })
-        : date.toLocaleDateString("en", { month: "short", day: "numeric" }),
-      price: parseFloat(price.toFixed(price < 1 ? 4 : 2)),
+        ? d.toLocaleDateString("en", { month: "short" })
+        : d.toLocaleDateString("en", { month: "short", day: "numeric" }),
+      price: parseFloat(price.toFixed(4)),
     });
   }
   return data;
-};
-
-// Mock transaction history per token
-const MOCK_TX: Record<string, Array<{ type: "send" | "receive" | "swap"; amount: string; date: string; address: string; status: "confirmed" | "pending" }>> = {
-  BTC: [
-    { type: "send", amount: "-0.015 BTC", date: "2h ago", address: "0x8a2...f4c1", status: "confirmed" },
-    { type: "receive", amount: "+0.05 BTC", date: "1d ago", address: "0x3b1...a8e2", status: "confirmed" },
-    { type: "receive", amount: "+0.1 BTC", date: "5d ago", address: "0xf2a...c3d4", status: "confirmed" },
-  ],
-  ETH: [
-    { type: "receive", amount: "+0.5 ETH", date: "5h ago", address: "0x7c9...b2a1", status: "confirmed" },
-    { type: "send", amount: "-0.2 ETH", date: "2d ago", address: "0x4e5...d6f7", status: "confirmed" },
-    { type: "swap", amount: "1.0 ETH → 3,500 USDT", date: "4d ago", address: "Swap", status: "confirmed" },
-  ],
-  SOL: [
-    { type: "swap", amount: "2.0 SOL → 357 USDT", date: "1d ago", address: "Swap", status: "confirmed" },
-    { type: "receive", amount: "+5.0 SOL", date: "3d ago", address: "0xa1b...2c3d", status: "confirmed" },
-  ],
-  USDT: [
-    { type: "receive", amount: "+500 USDT", date: "2d ago", address: "0x9f8...e7d6", status: "confirmed" },
-    { type: "send", amount: "-200 USDT", date: "5d ago", address: "0x1a2...b3c4", status: "confirmed" },
-  ],
-  GYDS: [
-    { type: "receive", amount: "+5,000 GYDS", date: "1d ago", address: "0xabc...def0", status: "confirmed" },
-    { type: "send", amount: "-1,000 GYDS", date: "3d ago", address: "0x123...4567", status: "confirmed" },
-    { type: "receive", amount: "+3,000 GYDS", date: "5d ago", address: "0x789...abc0", status: "confirmed" },
-    { type: "swap", amount: "2,000 GYDS → 300 GYD", date: "7d ago", address: "Swap", status: "confirmed" },
-  ],
-  GYD: [
-    { type: "receive", amount: "+2,000 GYD", date: "2d ago", address: "0xdef...1234", status: "confirmed" },
-    { type: "send", amount: "-500 GYD", date: "4d ago", address: "0x567...89ab", status: "confirmed" },
-    { type: "swap", amount: "1,000 GYD → 6,666 GYDS", date: "6d ago", address: "Swap", status: "confirmed" },
-  ],
 };
 
 const ChartTooltip = ({ active, payload }: any) => {
@@ -104,30 +62,82 @@ const TokenDetail = () => {
   const config = getNetworkConfig();
   const { toast } = useToast();
   const [timeRange, setTimeRange] = useState<TimeRange>("30D");
+  const [livePrice, setLivePrice] = useState<{ usd: number; change: number } | null>(null);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
+  const [loadingChart, setLoadingChart] = useState(false);
+  const [balance, setBalance] = useState<string>("—");
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
+  // Resolve token info
   let token: TokenInfo | null = null;
-
-  if (symbol && DEFAULT_TOKENS[symbol.toUpperCase()]) {
-    token = DEFAULT_TOKENS[symbol.toUpperCase()];
+  if (symbol && KNOWN_TOKENS[symbol.toUpperCase()]) {
+    token = KNOWN_TOKENS[symbol.toUpperCase()];
   } else if (symbol) {
     const custom = getCustomTokens().find((t) => t.symbol.toUpperCase() === symbol.toUpperCase());
     if (custom) {
       token = {
-        symbol: custom.symbol, name: custom.name, price: "—", priceNum: 0, change: "0.0%", up: true,
-        amount: "0", value: "—", color: custom.color, contractAddress: custom.contractAddress,
-        decimals: custom.decimals,
+        symbol: custom.symbol, name: custom.name, color: custom.color,
+        contractAddress: custom.contractAddress, decimals: custom.decimals,
         description: `${custom.name} (${custom.symbol}) is a custom imported ERC-20 token on the GYDS Network.`,
       };
     }
   }
 
-  const isStable = token?.symbol === "USDT" || token?.symbol === "GYD";
-  const priceData = useMemo(
-    () => token ? generatePriceData(token.priceNum, timeRange, !isStable) : [],
-    [token?.priceNum, timeRange, isStable]
-  );
+  const hasCoinGecko = token ? !!getCoinGeckoId(token.symbol) : false;
 
-  const transactions = token ? (MOCK_TX[token.symbol.toUpperCase()] || []) : [];
+  // Fetch wallet & balance
+  useEffect(() => {
+    getConnectedWallet().then(setWalletAddress);
+  }, []);
+
+  useEffect(() => {
+    if (!walletAddress || !token) return;
+    const fetchBal = async () => {
+      if (token!.symbol === "GYDS") {
+        const bal = await fetchNativeBalance(walletAddress);
+        setBalance(bal);
+      } else if (token!.contractAddress) {
+        const bal = await fetchTokenBalance(token!.contractAddress, walletAddress, token!.decimals);
+        setBalance(bal);
+      } else {
+        setBalance("0");
+      }
+    };
+    fetchBal();
+    const interval = setInterval(fetchBal, 30000);
+    return () => clearInterval(interval);
+  }, [walletAddress, token?.symbol]);
+
+  // Fetch live price from CoinGecko
+  useEffect(() => {
+    if (!token || !hasCoinGecko) return;
+    fetchPrices([token.symbol]).then((data) => {
+      const p = data[token!.symbol.toUpperCase()];
+      if (p) setLivePrice({ usd: p.usd, change: p.usd_24h_change });
+    });
+    const interval = setInterval(() => {
+      fetchPrices([token!.symbol]).then((data) => {
+        const p = data[token!.symbol.toUpperCase()];
+        if (p) setLivePrice({ usd: p.usd, change: p.usd_24h_change });
+      });
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [token?.symbol, hasCoinGecko]);
+
+  // Fetch price chart
+  useEffect(() => {
+    if (!token) return;
+    setLoadingChart(true);
+    if (hasCoinGecko) {
+      fetchPriceHistory(token.symbol, DAYS_MAP[timeRange]).then((data) => {
+        setPriceHistory(data.length > 0 ? data : generateFallbackData(timeRange));
+        setLoadingChart(false);
+      });
+    } else {
+      setPriceHistory(generateFallbackData(timeRange));
+      setLoadingChart(false);
+    }
+  }, [token?.symbol, timeRange, hasCoinGecko]);
 
   if (!token) {
     return (
@@ -139,6 +149,12 @@ const TokenDetail = () => {
       </div>
     );
   }
+
+  const priceDisplay = livePrice ? formatPrice(livePrice.usd) : "—";
+  const changeInfo = livePrice ? formatChange(livePrice.change) : { text: "—", up: true };
+  const balanceUsd = livePrice && balance !== "—"
+    ? `$${(parseFloat(balance.replace(/,/g, "")) * livePrice.usd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : "—";
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -170,42 +186,48 @@ const TokenDetail = () => {
           <p className="text-muted-foreground text-sm">{token.symbol}</p>
         </motion.div>
 
-        {/* Price Card */}
+        {/* Price Card — live data */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-card rounded-2xl p-5 mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Price</span>
-            <div className="flex items-center gap-1">
-              {token.up ? <TrendingUp size={14} className="text-[hsl(var(--success))]" /> : <TrendingDown size={14} className="text-destructive" />}
-              <span className={`text-sm font-medium ${token.up ? "text-[hsl(var(--success))]" : "text-destructive"}`}>{token.change}</span>
-            </div>
+            <span className="text-sm text-muted-foreground">Price {hasCoinGecko ? "(Live)" : ""}</span>
+            {changeInfo.text !== "—" && (
+              <div className="flex items-center gap-1">
+                {changeInfo.up ? <TrendingUp size={14} className="text-[hsl(var(--success))]" /> : <TrendingDown size={14} className="text-destructive" />}
+                <span className={`text-sm font-medium ${changeInfo.up ? "text-[hsl(var(--success))]" : "text-destructive"}`}>{changeInfo.text}</span>
+              </div>
+            )}
           </div>
-          <p className="text-3xl font-display font-bold text-foreground">{token.price}</p>
+          <p className="text-3xl font-display font-bold text-foreground">{priceDisplay}</p>
         </motion.div>
 
         {/* Price Chart */}
-        {token.priceNum > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-card rounded-2xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-foreground">Price Chart</span>
-              <div className="flex gap-1">
-                {(["7D", "30D", "1Y"] as TimeRange[]).map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      timeRange === range
-                        ? "gradient-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {range}
-                  </button>
-                ))}
-              </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-card rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-foreground">Price Chart</span>
+            <div className="flex gap-1">
+              {(["7D", "30D", "1Y"] as TimeRange[]).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    timeRange === range
+                      ? "gradient-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {range}
+                </button>
+              ))}
             </div>
-            <div className="h-[180px]">
+          </div>
+          <div className="h-[180px]">
+            {loadingChart ? (
+              <div className="h-full flex items-center justify-center">
+                <Loader2 size={24} className="text-muted-foreground animate-spin" />
+              </div>
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={priceData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <AreaChart data={priceHistory} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(160, 84%, 50%)" stopOpacity={0.3} />
@@ -218,15 +240,21 @@ const TokenDetail = () => {
                   <Area type="monotone" dataKey="price" stroke="hsl(160, 84%, 50%)" strokeWidth={2} fill="url(#priceGradient)" />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-          </motion.div>
-        )}
+            )}
+          </div>
+        </motion.div>
 
-        {/* Balance */}
+        {/* Balance — real wallet data */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card rounded-2xl p-5 mb-4">
           <span className="text-sm text-muted-foreground">Your Balance</span>
-          <p className="text-2xl font-display font-bold text-foreground mt-1">{token.amount} {token.symbol}</p>
-          <p className="text-sm text-muted-foreground">{token.value}</p>
+          {walletAddress ? (
+            <>
+              <p className="text-2xl font-display font-bold text-foreground mt-1">{balance} {token.symbol}</p>
+              <p className="text-sm text-muted-foreground">{balanceUsd}</p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-1">Connect wallet to view balance</p>
+          )}
         </motion.div>
 
         {/* Quick Actions */}
@@ -245,55 +273,8 @@ const TokenDetail = () => {
           ))}
         </motion.div>
 
-        {/* Transaction History */}
-        {transactions.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mb-6">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">Transaction History</h2>
-            <div className="space-y-2">
-              {transactions.map((tx, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 + i * 0.05 }}
-                  className="flex items-center gap-3 bg-card rounded-xl p-4"
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    tx.type === "send" ? "bg-destructive/10" : tx.type === "receive" ? "bg-[hsl(var(--success))]/10" : "bg-primary/10"
-                  }`}>
-                    {tx.type === "send" ? (
-                      <ArrowUpRight size={18} className="text-destructive" />
-                    ) : tx.type === "receive" ? (
-                      <ArrowDownLeft size={18} className="text-[hsl(var(--success))]" />
-                    ) : (
-                      <ArrowDownUp size={18} className="text-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-foreground capitalize">{tx.type}</p>
-                      <p className={`text-sm font-medium ${
-                        tx.type === "send" ? "text-destructive" : tx.type === "receive" ? "text-[hsl(var(--success))]" : "text-foreground"
-                      }`}>
-                        {tx.amount}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">{tx.address}</p>
-                      <div className="flex items-center gap-1">
-                        <Clock size={10} className="text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{tx.date}</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
         {/* About */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="mb-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="mb-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">About</h2>
           <div className="bg-card rounded-2xl p-4">
             <p className="text-sm text-foreground leading-relaxed">{token.description}</p>
@@ -301,7 +282,7 @@ const TokenDetail = () => {
         </motion.div>
 
         {/* Token Details */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">Details</h2>
           <div className="bg-card rounded-2xl divide-y divide-border">
             {details.map((item) => (
@@ -323,7 +304,7 @@ const TokenDetail = () => {
             rel="noopener noreferrer"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.26 }}
             className="flex items-center justify-center gap-2 mt-4 py-3 text-sm text-primary hover:text-primary/80 transition-colors"
           >
             <ExternalLink size={16} />

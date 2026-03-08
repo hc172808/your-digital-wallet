@@ -1,0 +1,130 @@
+// CoinGecko free API for live prices
+const COINGECKO_API = "https://api.coingecko.com/api/v3";
+
+// Map token symbols to CoinGecko IDs
+const SYMBOL_TO_ID: Record<string, string> = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  SOL: "solana",
+  USDT: "tether",
+  USDC: "usd-coin",
+  BNB: "binancecoin",
+  XRP: "ripple",
+  ADA: "cardano",
+  DOGE: "dogecoin",
+  DOT: "polkadot",
+  MATIC: "matic-network",
+  AVAX: "avalanche-2",
+  LINK: "chainlink",
+  UNI: "uniswap",
+};
+
+export interface PriceData {
+  usd: number;
+  usd_24h_change: number;
+}
+
+export interface PriceHistoryPoint {
+  date: string;
+  price: number;
+}
+
+/**
+ * Fetch current prices for multiple tokens from CoinGecko
+ */
+export const fetchPrices = async (symbols: string[]): Promise<Record<string, PriceData>> => {
+  const ids = symbols
+    .map((s) => SYMBOL_TO_ID[s.toUpperCase()])
+    .filter(Boolean);
+
+  if (ids.length === 0) return {};
+
+  try {
+    const res = await fetch(
+      `${COINGECKO_API}/simple/price?ids=${ids.join(",")}&vs_currencies=usd&include_24hr_change=true`
+    );
+    if (!res.ok) throw new Error("CoinGecko API error");
+    const data = await res.json();
+
+    const result: Record<string, PriceData> = {};
+    for (const symbol of symbols) {
+      const id = SYMBOL_TO_ID[symbol.toUpperCase()];
+      if (id && data[id]) {
+        result[symbol.toUpperCase()] = {
+          usd: data[id].usd,
+          usd_24h_change: data[id].usd_24h_change || 0,
+        };
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * Fetch price history for a token (7d, 30d, 365d)
+ */
+export const fetchPriceHistory = async (
+  symbol: string,
+  days: number
+): Promise<PriceHistoryPoint[]> => {
+  const id = SYMBOL_TO_ID[symbol.toUpperCase()];
+  if (!id) return [];
+
+  try {
+    const res = await fetch(
+      `${COINGECKO_API}/coins/${id}/market_chart?vs_currency=usd&days=${days}`
+    );
+    if (!res.ok) throw new Error("CoinGecko API error");
+    const data = await res.json();
+
+    if (!data.prices) return [];
+
+    // Sample points to avoid too many data points
+    const prices: [number, number][] = data.prices;
+    const step = Math.max(1, Math.floor(prices.length / (days <= 7 ? 7 * 24 : days <= 30 ? 30 : 365)));
+
+    return prices
+      .filter((_, i) => i % step === 0 || i === prices.length - 1)
+      .map(([timestamp, price]) => {
+        const d = new Date(timestamp);
+        return {
+          date:
+            days <= 7
+              ? d.toLocaleDateString("en", { weekday: "short" })
+              : days <= 30
+              ? d.toLocaleDateString("en", { month: "short", day: "numeric" })
+              : d.toLocaleDateString("en", { month: "short", year: "2-digit" }),
+          price: parseFloat(price.toFixed(price < 1 ? 4 : 2)),
+        };
+      });
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Format price for display
+ */
+export const formatPrice = (price: number): string => {
+  if (price >= 1000) return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (price >= 1) return `$${price.toFixed(2)}`;
+  if (price >= 0.01) return `$${price.toFixed(4)}`;
+  return `$${price.toFixed(6)}`;
+};
+
+/**
+ * Format change percentage
+ */
+export const formatChange = (change: number): { text: string; up: boolean } => {
+  const up = change >= 0;
+  return {
+    text: `${up ? "+" : ""}${change.toFixed(1)}%`,
+    up,
+  };
+};
+
+export const getCoinGeckoId = (symbol: string): string | undefined => {
+  return SYMBOL_TO_ID[symbol.toUpperCase()];
+};
