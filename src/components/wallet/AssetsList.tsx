@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Wallet, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { getCustomTokens, type CustomToken } from "@/lib/custom-tokens";
 import { TokenManager } from "@/components/wallet/ImportToken";
 import { fetchAllTokenBalances, getConnectedWallet, connectWallet } from "@/lib/balance-fetcher";
