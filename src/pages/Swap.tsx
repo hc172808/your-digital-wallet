@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownUp, ChevronDown, Settings2, Zap, Loader2, RefreshCw, TrendingDown } from "lucide-react";
 import BottomNav from "@/components/wallet/BottomNav";
 import SwapConfirmModal from "@/components/wallet/SwapConfirmModal";
+import SwapChart from "@/components/wallet/SwapChart";
+import CoinIcon from "@/components/wallet/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
 import { SWAP_TOKENS, fetchSwapPrices, getSwapQuote, executeSwap, type SwapToken, type SwapQuote } from "@/lib/dex-swap";
 import { unlockWallet, getWalletAddress, checkLockout } from "@/lib/wallet-core";
