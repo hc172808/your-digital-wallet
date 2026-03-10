@@ -75,9 +75,7 @@ const SwapConfirmModal = ({ open, quote, slippage, onClose, onConfirm }: SwapCon
                   <p className="text-xs text-muted-foreground">You Receive</p>
                   <p className="text-xl font-display font-bold text-foreground">{quote.toAmount} {quote.toToken.symbol}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${quote.toToken.color} flex items-center justify-center text-sm font-bold text-foreground`}>
-                  {quote.toToken.symbol.charAt(0)}
-                </div>
+                <CoinIcon symbol={quote.toToken.symbol} size={40} fallbackColor={quote.toToken.color} />
               </div>
             </div>
 

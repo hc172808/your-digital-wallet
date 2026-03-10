@@ -253,6 +253,9 @@ const Swap = () => {
             )}
           </div>
 
+          {/* Price chart */}
+          <SwapChart fromToken={fromToken} toToken={toToken} />
+
           {/* Rate info */}
           {quote && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl p-4 space-y-2">
