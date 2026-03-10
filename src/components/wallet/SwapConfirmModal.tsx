@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowDown, Shield, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import type { SwapQuote } from "@/lib/dex-swap";
+import CoinIcon from "@/components/wallet/CoinIcon";
 
 interface SwapConfirmModalProps {
   open: boolean;
@@ -66,9 +67,7 @@ const SwapConfirmModal = ({ open, quote, slippage, onClose, onConfirm }: SwapCon
                   <p className="text-xs text-muted-foreground">You Pay</p>
                   <p className="text-xl font-display font-bold text-foreground">{quote.fromAmount} {quote.fromToken.symbol}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${quote.fromToken.color} flex items-center justify-center text-sm font-bold text-foreground`}>
-                  {quote.fromToken.symbol.charAt(0)}
-                </div>
+                <CoinIcon symbol={quote.fromToken.symbol} size={40} fallbackColor={quote.fromToken.color} />
               </div>
               <div className="flex justify-center"><ArrowDown size={20} className="text-primary" /></div>
               <div className="bg-secondary/50 rounded-xl p-4 flex items-center justify-between">
@@ -76,9 +75,7 @@ const SwapConfirmModal = ({ open, quote, slippage, onClose, onConfirm }: SwapCon
                   <p className="text-xs text-muted-foreground">You Receive</p>
                   <p className="text-xl font-display font-bold text-foreground">{quote.toAmount} {quote.toToken.symbol}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${quote.toToken.color} flex items-center justify-center text-sm font-bold text-foreground`}>
-                  {quote.toToken.symbol.charAt(0)}
-                </div>
+                <CoinIcon symbol={quote.toToken.symbol} size={40} fallbackColor={quote.toToken.color} />
               </div>
             </div>
 

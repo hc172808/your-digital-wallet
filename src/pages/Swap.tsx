@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownUp, ChevronDown, Settings2, Zap, Loader2, RefreshCw, TrendingDown } from "lucide-react";
 import BottomNav from "@/components/wallet/BottomNav";
 import SwapConfirmModal from "@/components/wallet/SwapConfirmModal";
+import SwapChart from "@/components/wallet/SwapChart";
+import CoinIcon from "@/components/wallet/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
 import { SWAP_TOKENS, fetchSwapPrices, getSwapQuote, executeSwap, type SwapToken, type SwapQuote } from "@/lib/dex-swap";
 import { unlockWallet, getWalletAddress, checkLockout } from "@/lib/wallet-core";
@@ -109,9 +111,7 @@ const Swap = () => {
           onClick={() => { onSelect(token); onClose(); }}
           className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-secondary/50 transition-colors"
         >
-          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${token.color} flex items-center justify-center text-xs font-bold text-foreground`}>
-            {token.symbol.charAt(0)}
-          </div>
+          <CoinIcon symbol={token.symbol} size={32} fallbackColor={token.color} />
           <div className="text-left">
             <p className="text-sm font-semibold text-foreground">{token.symbol}</p>
             <p className="text-xs text-muted-foreground">{token.name}</p>
@@ -197,7 +197,7 @@ const Swap = () => {
                   onClick={() => { setShowFromPicker(!showFromPicker); setShowToPicker(false); }}
                   className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
                 >
-                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${fromToken.color}`} />
+                  <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
                   <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
                   <ChevronDown size={14} className="text-muted-foreground" />
                 </button>
@@ -236,7 +236,7 @@ const Swap = () => {
                   onClick={() => { setShowToPicker(!showToPicker); setShowFromPicker(false); }}
                   className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
                 >
-                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${toToken.color}`} />
+                  <CoinIcon symbol={toToken.symbol} size={24} fallbackColor={toToken.color} />
                   <span className="font-semibold text-foreground text-sm">{toToken.symbol}</span>
                   <ChevronDown size={14} className="text-muted-foreground" />
                 </button>
@@ -251,6 +251,9 @@ const Swap = () => {
               </p>
             )}
           </div>
+
+          {/* Price chart */}
+          <SwapChart fromToken={fromToken} toToken={toToken} />
 
           {/* Rate info */}
           {quote && (
