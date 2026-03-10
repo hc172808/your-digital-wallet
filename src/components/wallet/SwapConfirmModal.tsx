@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowDown, Shield, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import type { SwapQuote } from "@/lib/dex-swap";
+import CoinIcon from "@/components/wallet/CoinIcon";
 
 interface SwapConfirmModalProps {
   open: boolean;
