@@ -198,7 +198,7 @@ const Swap = () => {
                   onClick={() => { setShowFromPicker(!showFromPicker); setShowToPicker(false); }}
                   className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
                 >
-                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${fromToken.color}`} />
+                  <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
                   <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
                   <ChevronDown size={14} className="text-muted-foreground" />
                 </button>
