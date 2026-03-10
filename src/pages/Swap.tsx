@@ -1,33 +1,54 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowDownUp, ChevronDown, Info, Zap } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowDownUp, ChevronDown, Settings2, Zap, Loader2, RefreshCw, TrendingDown } from "lucide-react";
 import BottomNav from "@/components/wallet/BottomNav";
+import SwapConfirmModal from "@/components/wallet/SwapConfirmModal";
 import { useToast } from "@/hooks/use-toast";
+import { SWAP_TOKENS, fetchSwapPrices, getSwapQuote, executeSwap, type SwapToken, type SwapQuote } from "@/lib/dex-swap";
+import { unlockWallet, getWalletAddress, checkLockout } from "@/lib/wallet-core";
+import { saveTransaction } from "@/lib/transaction-history";
+import { formatPrice } from "@/lib/price-fetcher";
 
-const TOKENS = [
-  { symbol: "BTC", name: "Bitcoin", price: 67432.1, balance: 0.2145, color: "from-amber-500 to-orange-500" },
-  { symbol: "ETH", name: "Ethereum", price: 3521.4, balance: 1.832, color: "from-blue-400 to-indigo-500" },
-  { symbol: "SOL", name: "Solana", price: 178.9, balance: 12.5, color: "from-purple-500 to-fuchsia-500" },
-  { symbol: "USDT", name: "Tether", price: 1.0, balance: 1367.72, color: "from-emerald-400 to-green-500" },
-  { symbol: "AVAX", name: "Avalanche", price: 42.15, balance: 25.0, color: "from-red-400 to-rose-500" },
-  { symbol: "MATIC", name: "Polygon", price: 0.92, balance: 500.0, color: "from-violet-500 to-purple-500" },
-  { symbol: "GYDS", name: "GYDS Network", price: 0.15, balance: 10000.0, color: "from-cyan-400 to-teal-500" },
-  { symbol: "GYD", name: "GYD Stablecoin", price: 1.0, balance: 5000.0, color: "from-sky-400 to-cyan-500" },
-];
+const SLIPPAGE_OPTIONS = [0.5, 1.0, 2.0];
 
 const Swap = () => {
   const { toast } = useToast();
-  const [fromToken, setFromToken] = useState(TOKENS[0]);
-  const [toToken, setToToken] = useState(TOKENS[1]);
+  const [fromToken, setFromToken] = useState<SwapToken>(SWAP_TOKENS[0]);
+  const [toToken, setToToken] = useState<SwapToken>(SWAP_TOKENS[2]);
   const [fromAmount, setFromAmount] = useState("");
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [showSlippage, setShowSlippage] = useState(false);
+  const [slippage, setSlippage] = useState(0.5);
+  const [prices, setPrices] = useState<Record<string, number>>({});
+  const [loadingPrices, setLoadingPrices] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [quote, setQuote] = useState<SwapQuote | null>(null);
+  const walletAddress = getWalletAddress();
 
-  const toAmount = fromAmount
-    ? ((parseFloat(fromAmount) * fromToken.price) / toToken.price).toFixed(6)
-    : "";
+  // Fetch live prices
+  useEffect(() => {
+    const load = async () => {
+      setLoadingPrices(true);
+      try {
+        const p = await fetchSwapPrices();
+        setPrices(p);
+      } catch { /* silent */ }
+      setLoadingPrices(false);
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const rate = (fromToken.price / toToken.price).toFixed(6);
+  // Compute quote whenever inputs change
+  useEffect(() => {
+    if (fromAmount && Object.keys(prices).length > 0) {
+      setQuote(getSwapQuote(fromToken, toToken, fromAmount, prices, slippage));
+    } else {
+      setQuote(null);
+    }
+  }, [fromAmount, fromToken, toToken, prices, slippage]);
 
   const handleSwapTokens = () => {
     setFromToken(toToken);
@@ -35,27 +56,54 @@ const Swap = () => {
     setFromAmount("");
   };
 
-  const handleSwap = () => {
+  const handleInitiateSwap = () => {
     if (!fromAmount || parseFloat(fromAmount) <= 0) {
-      toast({ title: "Enter an amount", description: "Please enter a valid amount to swap.", variant: "destructive" });
+      toast({ title: "Enter an amount", variant: "destructive" });
       return;
     }
-    if (parseFloat(fromAmount) > fromToken.balance) {
-      toast({ title: "Insufficient balance", description: `You only have ${fromToken.balance} ${fromToken.symbol}.`, variant: "destructive" });
+    if (!quote) {
+      toast({ title: "Unable to get quote", description: "Prices may be loading", variant: "destructive" });
       return;
     }
-    toast({ title: "Swap Initiated", description: `Swapping ${fromAmount} ${fromToken.symbol} → ${toAmount} ${toToken.symbol}` });
-    setFromAmount("");
+    setConfirmOpen(true);
   };
 
-  const TokenPicker = ({ onSelect, exclude, onClose }: { onSelect: (t: typeof TOKENS[0]) => void; exclude: string; onClose: () => void }) => (
+  const handleConfirmSwap = useCallback(async (password: string) => {
+    if (!quote || !walletAddress) throw new Error("Missing quote or wallet");
+
+    const lockStatus = checkLockout();
+    if (lockStatus.locked) throw new Error(`Wallet locked for ${lockStatus.remainingSeconds}s`);
+
+    const wallet = await unlockWallet(password);
+    const txHash = await executeSwap(wallet, quote);
+
+    saveTransaction({
+      type: "swap",
+      symbol: `${quote.fromToken.symbol}→${quote.toToken.symbol}`,
+      amount: quote.fromAmount,
+      toAddress: walletAddress,
+      fromAddress: walletAddress,
+      txHash,
+      timestamp: Date.now(),
+      status: "confirmed",
+    });
+
+    toast({ title: "Swap Complete!", description: `${quote.fromAmount} ${quote.fromToken.symbol} → ${quote.toAmount} ${quote.toToken.symbol}` });
+    setFromAmount("");
+  }, [quote, walletAddress, toast]);
+
+  const fromPrice = prices[fromToken.symbol] ?? 0;
+  const toPrice = prices[toToken.symbol] ?? 0;
+  const usdValue = fromAmount ? (parseFloat(fromAmount) * fromPrice).toFixed(2) : "0.00";
+
+  const TokenPicker = ({ onSelect, exclude, onClose }: { onSelect: (t: SwapToken) => void; exclude: string; onClose: () => void }) => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
-      className="absolute inset-x-0 top-full mt-2 bg-card border border-border rounded-xl p-2 z-50 shadow-xl"
+      className="absolute inset-x-0 top-full mt-2 bg-card border border-border rounded-xl p-2 z-50 shadow-xl max-h-64 overflow-y-auto"
     >
-      {TOKENS.filter((t) => t.symbol !== exclude).map((token) => (
+      {SWAP_TOKENS.filter((t) => t.symbol !== exclude).map((token) => (
         <button
           key={token.symbol}
           onClick={() => { onSelect(token); onClose(); }}
@@ -68,7 +116,9 @@ const Swap = () => {
             <p className="text-sm font-semibold text-foreground">{token.symbol}</p>
             <p className="text-xs text-muted-foreground">{token.name}</p>
           </div>
-          <p className="ml-auto text-xs text-muted-foreground">{token.balance}</p>
+          <p className="ml-auto text-xs text-muted-foreground">
+            {prices[token.symbol] ? formatPrice(prices[token.symbol]) : "—"}
+          </p>
         </button>
       ))}
     </motion.div>
@@ -77,12 +127,58 @@ const Swap = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="max-w-lg mx-auto px-4 pt-6">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-display font-bold text-foreground">Swap</h1>
-          <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-            <Info size={20} />
+          <div>
+            <h1 className="text-xl font-display font-bold text-foreground">Swap</h1>
+            <div className="flex items-center gap-1.5 mt-1">
+              {loadingPrices ? (
+                <span className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Fetching prices…</span>
+              ) : (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--success))]" /> Live CoinGecko prices
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSlippage(!showSlippage)}
+            className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Settings2 size={20} />
           </button>
         </div>
+
+        {/* Slippage settings */}
+        <AnimatePresence>
+          {showSlippage && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4 overflow-hidden"
+            >
+              <div className="bg-card rounded-xl p-4">
+                <p className="text-xs text-muted-foreground mb-2">Slippage Tolerance</p>
+                <div className="flex gap-2">
+                  {SLIPPAGE_OPTIONS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSlippage(s)}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        slippage === s
+                          ? "gradient-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {s}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
           {/* From */}
@@ -106,15 +202,16 @@ const Swap = () => {
                   <ChevronDown size={14} className="text-muted-foreground" />
                 </button>
                 {showFromPicker && (
-                  <TokenPicker
-                    onSelect={setFromToken}
-                    exclude={toToken.symbol}
-                    onClose={() => setShowFromPicker(false)}
-                  />
+                  <TokenPicker onSelect={setFromToken} exclude={toToken.symbol} onClose={() => setShowFromPicker(false)} />
                 )}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Balance: {fromToken.balance} {fromToken.symbol}</p>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-muted-foreground">≈ ${usdValue}</p>
+              <p className="text-xs text-muted-foreground">
+                {fromPrice ? `1 ${fromToken.symbol} = ${formatPrice(fromPrice)}` : ""}
+              </p>
+            </div>
           </div>
 
           {/* Swap button */}
@@ -132,7 +229,7 @@ const Swap = () => {
             <p className="text-xs text-muted-foreground mb-2">You Receive</p>
             <div className="flex items-center gap-3">
               <p className="flex-1 text-2xl font-display font-bold text-foreground">
-                {toAmount || <span className="text-muted-foreground/40">0.00</span>}
+                {quote?.toAmount || <span className="text-muted-foreground/40">0.00</span>}
               </p>
               <div className="relative">
                 <button
@@ -144,43 +241,75 @@ const Swap = () => {
                   <ChevronDown size={14} className="text-muted-foreground" />
                 </button>
                 {showToPicker && (
-                  <TokenPicker
-                    onSelect={setToToken}
-                    exclude={fromToken.symbol}
-                    onClose={() => setShowToPicker(false)}
-                  />
+                  <TokenPicker onSelect={setToToken} exclude={fromToken.symbol} onClose={() => setShowToPicker(false)} />
                 )}
               </div>
             </div>
+            {quote && toPrice > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                ≈ ${(parseFloat(quote.toAmount) * toPrice).toFixed(2)}
+              </p>
+            )}
           </div>
 
           {/* Rate info */}
-          <div className="bg-card rounded-xl p-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Rate</span>
-              <span className="text-foreground">1 {fromToken.symbol} = {rate} {toToken.symbol}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Fee</span>
-              <span className="text-foreground flex items-center gap-1">
-                <Zap size={12} className="text-primary" /> 0.3%
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Slippage</span>
-              <span className="text-foreground">0.5%</span>
-            </div>
-          </div>
+          {quote && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Rate</span>
+                <span className="text-foreground flex items-center gap-1">
+                  <RefreshCw size={12} className="text-primary" />
+                  1 {fromToken.symbol} = {quote.rate} {toToken.symbol}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Fee</span>
+                <span className="text-foreground flex items-center gap-1">
+                  <Zap size={12} className="text-primary" /> {quote.fee} {toToken.symbol}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Price Impact</span>
+                <span className={`flex items-center gap-1 ${quote.priceImpact > 2 ? "text-destructive" : "text-foreground"}`}>
+                  {quote.priceImpact > 1 && <TrendingDown size={12} />}
+                  {quote.priceImpact}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Min. Received</span>
+                <span className="text-foreground">{quote.minimumReceived} {toToken.symbol}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Slippage</span>
+                <span className="text-foreground">{slippage}%</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Route</span>
+                <span className="text-foreground">{quote.route}</span>
+              </div>
+            </motion.div>
+          )}
 
           {/* Swap CTA */}
           <button
-            onClick={handleSwap}
-            className="w-full gradient-primary text-primary-foreground font-display font-bold py-4 rounded-xl text-lg hover:opacity-90 transition-opacity glow-primary"
+            onClick={handleInitiateSwap}
+            disabled={!fromAmount || loadingPrices}
+            className="w-full gradient-primary text-primary-foreground font-display font-bold py-4 rounded-xl text-lg hover:opacity-90 transition-opacity glow-primary disabled:opacity-50"
           >
-            Swap {fromToken.symbol} → {toToken.symbol}
+            {loadingPrices ? "Loading Prices…" : `Swap ${fromToken.symbol} → ${toToken.symbol}`}
           </button>
         </motion.div>
       </div>
+
+      {/* Confirm modal */}
+      <SwapConfirmModal
+        open={confirmOpen}
+        quote={quote}
+        slippage={slippage}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmSwap}
+      />
+
       <BottomNav />
     </div>
   );
