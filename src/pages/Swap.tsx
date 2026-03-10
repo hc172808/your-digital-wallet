@@ -112,7 +112,6 @@ const Swap = () => {
           className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-secondary/50 transition-colors"
         >
           <CoinIcon symbol={token.symbol} size={32} fallbackColor={token.color} />
-          </div>
           <div className="text-left">
             <p className="text-sm font-semibold text-foreground">{token.symbol}</p>
             <p className="text-xs text-muted-foreground">{token.name}</p>
