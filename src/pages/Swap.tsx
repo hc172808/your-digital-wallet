@@ -111,8 +111,7 @@ const Swap = () => {
           onClick={() => { onSelect(token); onClose(); }}
           className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-secondary/50 transition-colors"
         >
-          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${token.color} flex items-center justify-center text-xs font-bold text-foreground`}>
-            {token.symbol.charAt(0)}
+          <CoinIcon symbol={token.symbol} size={32} fallbackColor={token.color} />
           </div>
           <div className="text-left">
             <p className="text-sm font-semibold text-foreground">{token.symbol}</p>
