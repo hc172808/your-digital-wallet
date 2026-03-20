@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight, ArrowDownLeft, Repeat, Filter, ExternalLink, Inbox } from "lucide-react";
+import CoinIcon from "@/components/wallet/CoinIcon";
 import BottomNav from "@/components/wallet/BottomNav";
 import { getTransactionHistory, formatTxDate, formatTxTime, shortAddress, type Transaction } from "@/lib/transaction-history";
 import { getNetworkConfig } from "@/lib/network-config";
