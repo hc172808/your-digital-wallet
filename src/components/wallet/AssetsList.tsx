@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getCustomTokens, type CustomToken } from "@/lib/custom-tokens";
 import { TokenManager } from "@/components/wallet/ImportToken";
+import CoinIcon from "@/components/wallet/CoinIcon";
 import { fetchNativeBalance, fetchAllTokenBalances } from "@/lib/balance-fetcher";
 import { fetchPrices, formatPrice, formatChange, type PriceData } from "@/lib/price-fetcher";
 import { getWalletAddress } from "@/lib/wallet-core";
