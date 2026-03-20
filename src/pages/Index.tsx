@@ -48,6 +48,7 @@ const Index = () => {
         </div>
       </div>
 
+      <PwaInstallBanner />
       <BottomNav />
     </div>
   );

@@ -130,4 +130,4 @@ export const getActiveRpc = async (): Promise<string | null> => {
   return config.rpcUrls[0];
 };
 
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.4.0";

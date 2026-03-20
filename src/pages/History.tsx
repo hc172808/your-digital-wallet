@@ -124,8 +124,11 @@ const History = () => {
                       transition={{ delay: i * 0.04, duration: 0.3 }}
                       className="flex items-center gap-3 p-4 bg-card rounded-xl hover:bg-secondary/50 transition-colors group"
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${colorMap[tx.type]}`}>
-                        {iconMap[tx.type]}
+                      <div className="relative shrink-0">
+                        <CoinIcon symbol={tx.symbol} size={40} />
+                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${colorMap[tx.type]} border-2 border-background`}>
+                          {iconMap[tx.type]}
+                        </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">

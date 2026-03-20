@@ -122,9 +122,7 @@ const AssetsList = () => {
             onClick={() => navigate(`/token/${asset.symbol}`)}
             className="flex items-center gap-3 bg-card rounded-xl p-4 hover:bg-secondary/50 transition-colors cursor-pointer"
           >
-            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${asset.color} flex items-center justify-center text-sm font-bold text-foreground`}>
-              {asset.symbol.charAt(0)}
-            </div>
+            <CoinIcon symbol={asset.symbol} size={40} fallbackColor={asset.color} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-foreground">{asset.symbol}</p>
