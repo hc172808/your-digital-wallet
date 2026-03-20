@@ -3,6 +3,7 @@ import PortfolioChart from "@/components/wallet/PortfolioChart";
 import AssetsList from "@/components/wallet/AssetsList";
 import RecentTransactions from "@/components/wallet/RecentTransactions";
 import BottomNav from "@/components/wallet/BottomNav";
+import PwaInstallBanner from "@/components/wallet/PwaInstallBanner";
 import { Bell, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -14,7 +15,7 @@ const Index = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-sm text-muted-foreground">Welcome back</p>
-            <h2 className="text-xl font-display font-bold text-foreground">CryptoWallet</h2>
+            <h2 className="text-xl font-display font-bold text-foreground">GYDS Wallet</h2>
           </div>
           <div className="flex items-center gap-2">
             <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
@@ -48,6 +49,7 @@ const Index = () => {
         </div>
       </div>
 
+      <PwaInstallBanner />
       <BottomNav />
     </div>
   );

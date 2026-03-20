@@ -11,6 +11,7 @@ import { fetchPrices, fetchPriceHistory, formatPrice, formatChange, getCoinGecko
 import { useToast } from "@/hooks/use-toast";
 import { getWalletAddress } from "@/lib/wallet-core";
 import TokenChat from "@/components/wallet/TokenChat";
+import CoinIcon from "@/components/wallet/CoinIcon";
 
 interface TokenInfo {
   symbol: string;
@@ -181,8 +182,8 @@ const TokenDetail = () => {
 
         {/* Token Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
-          <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${token.color} flex items-center justify-center text-2xl font-bold text-foreground mx-auto mb-4`}>
-            {token.symbol.charAt(0)}
+          <div className="mx-auto mb-4">
+            <CoinIcon symbol={token.symbol} size={80} fallbackColor={token.color} />
           </div>
           <h1 className="text-2xl font-display font-bold text-foreground">{token.name}</h1>
           <p className="text-muted-foreground text-sm">{token.symbol}</p>
