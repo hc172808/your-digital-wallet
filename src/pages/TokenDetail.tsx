@@ -11,6 +11,7 @@ import { fetchPrices, fetchPriceHistory, formatPrice, formatChange, getCoinGecko
 import { useToast } from "@/hooks/use-toast";
 import { getWalletAddress } from "@/lib/wallet-core";
 import TokenChat from "@/components/wallet/TokenChat";
+import CoinIcon from "@/components/wallet/CoinIcon";
 
 interface TokenInfo {
   symbol: string;
