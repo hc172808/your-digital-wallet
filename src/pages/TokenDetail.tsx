@@ -1,15 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, Copy, ArrowUpRight, ArrowDownLeft, ArrowDownUp, Coins, Hash, FileText, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, Copy, ArrowUpRight, ArrowDownLeft, ArrowDownUp, Coins, Hash, FileText, Loader2, EyeOff, Eye, AlertTriangle, BarChart3, Activity } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import BottomNav from "@/components/wallet/BottomNav";
 import { getNetworkConfig } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
 import { fetchNativeBalance, fetchTokenBalance } from "@/lib/balance-fetcher";
-import { fetchPrices, fetchPriceHistory, formatPrice, formatChange, getCoinGeckoId, type PriceHistoryPoint } from "@/lib/price-fetcher";
+import { fetchPrices, fetchPriceHistory, fetchMarketData, formatPrice, formatChange, formatLargeNumber, getCoinGeckoId, type PriceHistoryPoint, type MarketData } from "@/lib/price-fetcher";
 import { useToast } from "@/hooks/use-toast";
 import { getWalletAddress } from "@/lib/wallet-core";
+import { isTokenHidden, hideToken, unhideToken } from "@/lib/hidden-tokens";
 import TokenChat from "@/components/wallet/TokenChat";
 import CoinIcon from "@/components/wallet/CoinIcon";
 
@@ -27,22 +28,24 @@ const KNOWN_TOKENS: Record<string, TokenInfo> = {
   GYD: { symbol: "GYD", name: "GYD Stablecoin", color: "from-sky-400 to-cyan-500", decimals: 18, description: "GYD is a stablecoin on the GYDS Network pegged to 1 USD. Used for payments, transfers, and DeFi applications." },
 };
 
-type TimeRange = "7D" | "30D" | "1Y";
-const DAYS_MAP: Record<TimeRange, number> = { "7D": 7, "30D": 30, "1Y": 365 };
+type TimeRange = "1H" | "1D" | "7D" | "30D" | "1Y";
+const DAYS_MAP: Record<TimeRange, number> = { "1H": 1, "1D": 1, "7D": 7, "30D": 30, "1Y": 365 };
 
-// Fallback: generate synthetic chart data for tokens not on CoinGecko
 const generateFallbackData = (range: TimeRange): PriceHistoryPoint[] => {
-  const points = DAYS_MAP[range];
+  const count = range === "1H" ? 60 : range === "1D" ? 24 : DAYS_MAP[range];
   const data: PriceHistoryPoint[] = [];
   let price = 0.15;
-  for (let i = 0; i < points; i++) {
+  for (let i = 0; i < count; i++) {
     price += (Math.random() - 0.48) * 0.005;
     price = Math.max(price, 0.01);
     const d = new Date();
-    d.setDate(d.getDate() - (points - i));
+    if (range === "1H") d.setMinutes(d.getMinutes() - (count - i));
+    else if (range === "1D") d.setHours(d.getHours() - (count - i));
+    else d.setDate(d.getDate() - (count - i));
     data.push({
-      date: range === "1Y"
-        ? d.toLocaleDateString("en", { month: "short" })
+      date: range === "1H" ? d.toLocaleTimeString("en", { hour: "numeric", minute: "2-digit" })
+        : range === "1D" ? d.toLocaleTimeString("en", { hour: "numeric" })
+        : range === "1Y" ? d.toLocaleDateString("en", { month: "short" })
         : d.toLocaleDateString("en", { month: "short", day: "numeric" }),
       price: parseFloat(price.toFixed(4)),
     });
@@ -70,8 +73,9 @@ const TokenDetail = () => {
   const [loadingChart, setLoadingChart] = useState(false);
   const [balance, setBalance] = useState<string>("—");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [hidden, setHidden] = useState(false);
 
-  // Resolve token info
   let token: TokenInfo | null = null;
   if (symbol && KNOWN_TOKENS[symbol.toUpperCase()]) {
     token = KNOWN_TOKENS[symbol.toUpperCase()];
@@ -87,21 +91,20 @@ const TokenDetail = () => {
   }
 
   const hasCoinGecko = token ? !!getCoinGeckoId(token.symbol) : false;
+  const isCustom = token ? !KNOWN_TOKENS[token.symbol.toUpperCase()] : false;
 
-  // Get wallet address from internal wallet
   useEffect(() => {
     setWalletAddress(getWalletAddress());
-  }, []);
+    if (symbol) setHidden(isTokenHidden(symbol));
+  }, [symbol]);
 
   useEffect(() => {
     if (!walletAddress || !token) return;
     const fetchBal = async () => {
       if (token!.symbol === "GYDS") {
-        const bal = await fetchNativeBalance(walletAddress);
-        setBalance(bal);
+        setBalance(await fetchNativeBalance(walletAddress));
       } else if (token!.contractAddress) {
-        const bal = await fetchTokenBalance(token!.contractAddress, walletAddress, token!.decimals);
-        setBalance(bal);
+        setBalance(await fetchTokenBalance(token!.contractAddress, walletAddress, token!.decimals));
       } else {
         setBalance("0");
       }
@@ -111,23 +114,23 @@ const TokenDetail = () => {
     return () => clearInterval(interval);
   }, [walletAddress, token?.symbol]);
 
-  // Fetch live price from CoinGecko
   useEffect(() => {
     if (!token || !hasCoinGecko) return;
-    fetchPrices([token.symbol]).then((data) => {
+    const fetchLive = () => fetchPrices([token!.symbol]).then((data) => {
       const p = data[token!.symbol.toUpperCase()];
       if (p) setLivePrice({ usd: p.usd, change: p.usd_24h_change });
     });
-    const interval = setInterval(() => {
-      fetchPrices([token!.symbol]).then((data) => {
-        const p = data[token!.symbol.toUpperCase()];
-        if (p) setLivePrice({ usd: p.usd, change: p.usd_24h_change });
-      });
-    }, 60000);
+    fetchLive();
+    const interval = setInterval(fetchLive, 60000);
     return () => clearInterval(interval);
   }, [token?.symbol, hasCoinGecko]);
 
-  // Fetch price chart
+  // Market data
+  useEffect(() => {
+    if (!token || !hasCoinGecko) return;
+    fetchMarketData(token.symbol).then(setMarketData);
+  }, [token?.symbol, hasCoinGecko]);
+
   useEffect(() => {
     if (!token) return;
     setLoadingChart(true);
@@ -164,6 +167,11 @@ const TokenDetail = () => {
     toast({ title: "Copied to clipboard" });
   };
 
+  const toggleHide = () => {
+    if (hidden) { unhideToken(token!.symbol); setHidden(false); toast({ title: "Token visible" }); }
+    else { hideToken(token!.symbol); setHidden(true); toast({ title: "Token hidden from dashboard" }); }
+  };
+
   const details = [
     { icon: Coins, label: "Symbol", value: token.symbol },
     { icon: Hash, label: "Decimals", value: String(token.decimals) },
@@ -175,10 +183,26 @@ const TokenDetail = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="max-w-lg mx-auto px-4 pt-6">
-        <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
-          <ArrowLeft size={20} />
-          <span className="font-medium">Back</span>
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft size={20} />
+            <span className="font-medium">Back</span>
+          </Link>
+          <button onClick={toggleHide} className="text-muted-foreground hover:text-foreground transition-colors">
+            {hidden ? <Eye size={20} /> : <EyeOff size={20} />}
+          </button>
+        </div>
+
+        {/* Unverified token warning */}
+        {isCustom && !hasCoinGecko && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 mb-4 flex items-center gap-3">
+            <AlertTriangle size={18} className="text-yellow-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-yellow-500">Unverified Token</p>
+              <p className="text-xs text-muted-foreground">This token was manually imported. Verify the contract address before transacting.</p>
+            </div>
+          </motion.div>
+        )}
 
         {/* Token Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
@@ -189,7 +213,7 @@ const TokenDetail = () => {
           <p className="text-muted-foreground text-sm">{token.symbol}</p>
         </motion.div>
 
-        {/* Price Card — live data */}
+        {/* Price Card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-card rounded-2xl p-5 mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">Price {hasCoinGecko ? "(Live)" : ""}</span>
@@ -201,18 +225,24 @@ const TokenDetail = () => {
             )}
           </div>
           <p className="text-3xl font-display font-bold text-foreground">{priceDisplay}</p>
+          {marketData && (
+            <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+              <span>H: {formatPrice(marketData.high24h)}</span>
+              <span>L: {formatPrice(marketData.low24h)}</span>
+            </div>
+          )}
         </motion.div>
 
-        {/* Price Chart */}
+        {/* Price Chart with 5 timeframes */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-card rounded-2xl p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-foreground">Price Chart</span>
             <div className="flex gap-1">
-              {(["7D", "30D", "1Y"] as TimeRange[]).map((range) => (
+              {(["1H", "1D", "7D", "30D", "1Y"] as TimeRange[]).map((range) => (
                 <button
                   key={range}
                   onClick={() => setTimeRange(range)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                     timeRange === range
                       ? "gradient-primary text-primary-foreground"
                       : "bg-secondary text-muted-foreground hover:text-foreground"
@@ -247,7 +277,29 @@ const TokenDetail = () => {
           </div>
         </motion.div>
 
-        {/* Balance — real wallet data */}
+        {/* Market Data */}
+        {marketData && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }} className="bg-card rounded-2xl p-4 mb-4">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+              <BarChart3 size={16} className="text-primary" /> Market Data
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Market Cap", value: formatLargeNumber(marketData.marketCap) },
+                { label: "24h Volume", value: formatLargeNumber(marketData.volume24h) },
+                { label: "Circulating", value: marketData.circulatingSupply.toLocaleString("en-US", { maximumFractionDigits: 0 }) },
+                { label: "Total Supply", value: marketData.totalSupply ? marketData.totalSupply.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "∞" },
+              ].map((item) => (
+                <div key={item.label} className="bg-secondary/50 rounded-xl p-3">
+                  <p className="text-xs text-muted-foreground">{item.label}</p>
+                  <p className="text-sm font-semibold text-foreground mt-0.5">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Balance */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card rounded-2xl p-5 mb-4">
           <span className="text-sm text-muted-foreground">Your Balance</span>
           {walletAddress ? (
@@ -302,6 +354,16 @@ const TokenDetail = () => {
           </div>
         </motion.div>
 
+        {/* Token Settings */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-4 mb-4">
+          <div className="bg-card rounded-2xl divide-y divide-border">
+            <button onClick={toggleHide} className="w-full flex items-center gap-3 p-4 hover:bg-secondary/50 transition-colors text-left">
+              {hidden ? <Eye size={16} className="text-muted-foreground" /> : <EyeOff size={16} className="text-muted-foreground" />}
+              <span className="text-sm text-foreground">{hidden ? "Show Token" : "Hide Token"}</span>
+            </button>
+          </div>
+        </motion.div>
+
         {/* Block Explorer Link */}
         {token.contractAddress && (
           <motion.a
@@ -310,7 +372,7 @@ const TokenDetail = () => {
             rel="noopener noreferrer"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.26 }}
+            transition={{ delay: 0.32 }}
             className="flex items-center justify-center gap-2 mt-4 py-3 text-sm text-primary hover:text-primary/80 transition-colors"
           >
             <ExternalLink size={16} />

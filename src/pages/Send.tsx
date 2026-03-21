@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowUpRight, QrCode, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, QrCode, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Fuel } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/wallet/BottomNav";
 import QrScanner from "@/components/wallet/QrScanner";
@@ -8,6 +8,7 @@ import { getNetworkConfig, getActiveRpc } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
 import { getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction, checkLockout, addressSchema, amountSchema } from "@/lib/wallet-core";
 import { saveTransaction } from "@/lib/transaction-history";
+import { estimateGasFee, type FeeEstimate } from "@/lib/fee-estimator";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_TOKENS = [
@@ -25,6 +26,8 @@ const Send = () => {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [feeEstimate, setFeeEstimate] = useState<FeeEstimate | null>(null);
+  const [loadingFee, setLoadingFee] = useState(false);
   const { toast } = useToast();
   const config = getNetworkConfig();
   const wallet = getWalletAddress();
@@ -39,6 +42,22 @@ const Send = () => {
     setAddress(scannedAddress);
     toast({ title: "Address scanned!", description: scannedAddress.slice(0, 16) + "..." });
   }, [toast]);
+
+  // Estimate fee when address + amount are valid
+  useEffect(() => {
+    if (!wallet || !address || !amount) { setFeeEstimate(null); return; }
+    try { addressSchema.parse(address); } catch { return; }
+    try { amountSchema.parse(amount); } catch { return; }
+
+    setLoadingFee(true);
+    const timer = setTimeout(() => {
+      estimateGasFee(wallet, address, amount).then((est) => {
+        setFeeEstimate(est);
+        setLoadingFee(false);
+      }).catch(() => setLoadingFee(false));
+    }, 500); // debounce
+    return () => clearTimeout(timer);
+  }, [wallet, address, amount]);
 
   const handleSend = async () => {
     setTxError(null);
@@ -200,6 +219,25 @@ const Send = () => {
               </button>
             </div>
           </div>
+
+          {/* Fee Estimate */}
+          {(feeEstimate || loadingFee) && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Fuel size={16} className="text-muted-foreground" />
+                <span className="text-sm font-semibold text-foreground">Estimated Fee</span>
+                {loadingFee && <Loader2 size={14} className="text-muted-foreground animate-spin" />}
+              </div>
+              {feeEstimate && (
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <span>Gas Price: {feeEstimate.gasPrice} Gwei</span>
+                  <span>Gas Limit: {feeEstimate.gasLimit}</span>
+                  <span>Fee: {feeEstimate.totalFeeEth} {config.symbol}</span>
+                  <span>{feeEstimate.totalFeeUsd}</span>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* TX Result */}
           {txHash && (
