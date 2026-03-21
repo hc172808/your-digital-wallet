@@ -104,6 +104,40 @@ export const fetchPriceHistory = async (
   }
 };
 
+// ─── Market data (cap, volume, supply) ───
+
+export interface MarketData {
+  marketCap: number;
+  volume24h: number;
+  circulatingSupply: number;
+  totalSupply: number | null;
+  high24h: number;
+  low24h: number;
+}
+
+export const fetchMarketData = async (symbol: string): Promise<MarketData | null> => {
+  const id = SYMBOL_TO_ID[symbol.toUpperCase()];
+  if (!id) return null;
+
+  try {
+    const res = await fetch(`${COINGECKO_API}/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const md = data.market_data;
+    if (!md) return null;
+    return {
+      marketCap: md.market_cap?.usd || 0,
+      volume24h: md.total_volume?.usd || 0,
+      circulatingSupply: md.circulating_supply || 0,
+      totalSupply: md.total_supply,
+      high24h: md.high_24h?.usd || 0,
+      low24h: md.low_24h?.usd || 0,
+    };
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Format price for display
  */
@@ -112,6 +146,14 @@ export const formatPrice = (price: number): string => {
   if (price >= 1) return `$${price.toFixed(2)}`;
   if (price >= 0.01) return `$${price.toFixed(4)}`;
   return `$${price.toFixed(6)}`;
+};
+
+export const formatLargeNumber = (n: number): string => {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(2)}`;
 };
 
 /**
