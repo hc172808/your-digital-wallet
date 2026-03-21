@@ -43,6 +43,22 @@ const Send = () => {
     toast({ title: "Address scanned!", description: scannedAddress.slice(0, 16) + "..." });
   }, [toast]);
 
+  // Estimate fee when address + amount are valid
+  useEffect(() => {
+    if (!wallet || !address || !amount) { setFeeEstimate(null); return; }
+    try { addressSchema.parse(address); } catch { return; }
+    try { amountSchema.parse(amount); } catch { return; }
+
+    setLoadingFee(true);
+    const timer = setTimeout(() => {
+      estimateGasFee(wallet, address, amount).then((est) => {
+        setFeeEstimate(est);
+        setLoadingFee(false);
+      }).catch(() => setLoadingFee(false));
+    }, 500); // debounce
+    return () => clearTimeout(timer);
+  }, [wallet, address, amount]);
+
   const handleSend = async () => {
     setTxError(null);
     setTxHash(null);
