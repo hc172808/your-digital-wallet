@@ -98,6 +98,10 @@ const AssetsList = () => {
     }),
   ];
 
+  // Filter hidden tokens
+  const hiddenTokens = getHiddenTokens();
+  const visibleAssets = allAssets.filter((a) => !hiddenTokens.includes(a.symbol.toUpperCase()));
+
   return (
     <div>
       {walletAddress && (
