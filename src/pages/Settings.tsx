@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Shield, Bell, Moon, HelpCircle, LogOut, ChevronRight, ArrowLeft, Lock, Fingerprint, Key, Sun, Monitor, Mail, MessageSquare, FileText, Globe, Wallet, Download } from "lucide-react";
+import { User, Shield, Bell, Moon, HelpCircle, LogOut, ChevronRight, ArrowLeft, Lock, Fingerprint, Key, Sun, Monitor, Mail, MessageSquare, FileText, Globe, Wallet, Download, Timer } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import BottomNav from "@/components/wallet/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_VERSION } from "@/lib/network-config";
 import { getWalletAddress, deleteWallet } from "@/lib/wallet-core";
+import { getAutoLockTimeout, setAutoLockTimeout, AUTO_LOCK_OPTIONS, lockSession } from "@/lib/session-lock";
 
 type SettingsPanel = null | "profile" | "security" | "notifications" | "appearance" | "help";
 
