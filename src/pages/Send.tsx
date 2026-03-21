@@ -26,6 +26,8 @@ const Send = () => {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [feeEstimate, setFeeEstimate] = useState<FeeEstimate | null>(null);
+  const [loadingFee, setLoadingFee] = useState(false);
   const { toast } = useToast();
   const config = getNetworkConfig();
   const wallet = getWalletAddress();
