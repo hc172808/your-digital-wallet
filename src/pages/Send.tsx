@@ -237,7 +237,7 @@ const Send = () => {
                 </div>
               )}
             </motion.div>
-          )
+          )}
 
           {/* TX Result */}
           {txHash && (
