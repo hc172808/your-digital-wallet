@@ -114,7 +114,7 @@ const AssetsList = () => {
         <h2 className="text-lg font-display font-semibold text-foreground">Your Assets</h2>
       </div>
       <div className="space-y-3 mb-6">
-        {allAssets.map((asset, i) => (
+        {visibleAssets.map((asset, i) => (
           <motion.div
             key={`${asset.symbol}-${refreshKey}-${i}`}
             initial={{ opacity: 0, x: -20 }}

@@ -111,6 +111,43 @@ const Settings = () => {
                 )}
               </motion.div>
             ))}
+
+            {/* Auto-lock timer */}
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.24 }} className="pt-3">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-card">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
+                  <Timer size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">Auto-Lock</p>
+                  <p className="text-xs text-muted-foreground">Lock wallet after inactivity</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2 px-4">
+                {AUTO_LOCK_OPTIONS.map((opt) => (
+                  <button key={opt.ms} onClick={() => { setAutoLockTimeout(opt.ms); toast({ title: `Auto-lock: ${opt.label}` }); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      getAutoLockTimeout() === opt.ms ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Lock now button */}
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
+              <button onClick={() => { lockSession(); window.location.reload(); }}
+                className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-card transition-colors text-left mt-2">
+                <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+                  <Lock size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-destructive">Lock Now</p>
+                  <p className="text-xs text-muted-foreground">Immediately lock your wallet</p>
+                </div>
+              </button>
+            </motion.div>
           </div>
         );
       case "notifications":
