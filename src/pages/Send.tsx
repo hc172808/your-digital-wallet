@@ -220,6 +220,25 @@ const Send = () => {
             </div>
           </div>
 
+          {/* Fee Estimate */}
+          {(feeEstimate || loadingFee) && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Fuel size={16} className="text-muted-foreground" />
+                <span className="text-sm font-semibold text-foreground">Estimated Fee</span>
+                {loadingFee && <Loader2 size={14} className="text-muted-foreground animate-spin" />}
+              </div>
+              {feeEstimate && (
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <span>Gas Price: {feeEstimate.gasPrice} Gwei</span>
+                  <span>Gas Limit: {feeEstimate.gasLimit}</span>
+                  <span>Fee: {feeEstimate.totalFeeEth} {config.symbol}</span>
+                  <span>{feeEstimate.totalFeeUsd}</span>
+                </div>
+              )}
+            </motion.div>
+          )
+
           {/* TX Result */}
           {txHash && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[hsl(var(--success))]/10 rounded-xl p-4 flex items-start gap-3">
