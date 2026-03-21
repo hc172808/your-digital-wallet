@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowUpRight, QrCode, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, QrCode, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Fuel } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/wallet/BottomNav";
 import QrScanner from "@/components/wallet/QrScanner";
@@ -8,6 +8,7 @@ import { getNetworkConfig, getActiveRpc } from "@/lib/network-config";
 import { getCustomTokens } from "@/lib/custom-tokens";
 import { getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction, checkLockout, addressSchema, amountSchema } from "@/lib/wallet-core";
 import { saveTransaction } from "@/lib/transaction-history";
+import { estimateGasFee, type FeeEstimate } from "@/lib/fee-estimator";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_TOKENS = [
