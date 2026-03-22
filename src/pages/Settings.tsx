@@ -23,6 +23,7 @@ const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const walletAddress = getWalletAddress();
+  const showAdmin = isAdminWallet(walletAddress);
 
   const SETTINGS = [
     { icon: Wallet, label: "Wallet", desc: "Export, import, backup", panel: "profile" as SettingsPanel },
