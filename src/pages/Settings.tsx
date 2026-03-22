@@ -286,9 +286,11 @@ const Settings = () => {
                   <Link to="/network" className="flex items-center gap-1 hover:text-foreground transition-colors">
                     <Globe size={12} /> Network
                   </Link>
-                  <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
-                    <Shield size={12} /> Admin
-                  </Link>
+                  {showAdmin && (
+                    <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      <Shield size={12} /> Admin
+                    </Link>
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -1,86 +1,37 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Shield, Server, Globe, Hash, Coins, Users, UserPlus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowLeft, Plus, Trash2, Save, Shield, Server, Globe, Hash, Coins, Users, UserPlus, AlertTriangle } from "lucide-react";
+import { Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
   getNetworkConfig,
   saveNetworkConfig,
-  isAdminSetup,
-  setupAdmin,
-  verifyAdmin,
   validateRpcUrl,
   APP_VERSION,
   type NetworkConfig,
 } from "@/lib/network-config";
-
-// Multi-admin storage
-const ADMINS_KEY = "gyds_admin_list";
-
-interface AdminUser {
-  id: string;
-  name: string;
-  createdAt: number;
-}
-
-const getAdminList = (): AdminUser[] => {
-  try {
-    const stored = localStorage.getItem(ADMINS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
-
-const saveAdminList = (admins: AdminUser[]) => {
-  localStorage.setItem(ADMINS_KEY, JSON.stringify(admins));
-};
+import { getWalletAddress } from "@/lib/wallet-core";
+import { isAdminWallet, getAdminWallets, addAdminWallet, removeAdminWallet, isEnvAdmin } from "@/lib/admin-auth";
 
 const Admin = () => {
   const { toast } = useToast();
-  const [authenticated, setAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
-  const [isSetup, setIsSetup] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const walletAddress = getWalletAddress();
+  const isAdmin = isAdminWallet(walletAddress);
+
   const [config, setConfig] = useState<NetworkConfig>(getNetworkConfig());
   const [newRpc, setNewRpc] = useState("");
-  const [adminList, setAdminList] = useState<AdminUser[]>([]);
-  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminAddress, setNewAdminAddress] = useState("");
   const [activeTab, setActiveTab] = useState<"network" | "admins">("network");
+  const [adminWallets, setAdminWallets] = useState<string[]>([]);
 
   useEffect(() => {
-    setIsSetup(isAdminSetup());
-    setAdminList(getAdminList());
+    setAdminWallets(getAdminWallets());
   }, []);
 
-  const handleLogin = async () => {
-    if (!password.trim()) {
-      toast({ title: "Enter password", variant: "destructive" });
-      return;
-    }
-    if (!isSetup) {
-      if (password.length < 8) {
-        toast({ title: "Password must be at least 8 characters", variant: "destructive" });
-        return;
-      }
-      if (password !== confirmPassword) {
-        toast({ title: "Passwords don't match", variant: "destructive" });
-        return;
-      }
-      await setupAdmin(password);
-      // Initialize admin list with primary admin
-      const initial: AdminUser[] = [{ id: "primary", name: "Primary Admin", createdAt: Date.now() }];
-      saveAdminList(initial);
-      setAdminList(initial);
-      setAuthenticated(true);
-      toast({ title: "Admin account created" });
-    } else {
-      const valid = await verifyAdmin(password);
-      if (valid) {
-        setAuthenticated(true);
-      } else {
-        toast({ title: "Invalid password", variant: "destructive" });
-      }
-    }
-  };
+  // Block non-admin users
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleAddRpc = () => {
     const trimmed = newRpc.trim();
@@ -111,76 +62,47 @@ const Admin = () => {
   };
 
   const handleAddAdmin = () => {
-    const name = newAdminName.trim();
-    if (!name) return;
-    if (name.length > 30) { toast({ title: "Name too long", variant: "destructive" }); return; }
-    const newAdmin: AdminUser = { id: `admin-${Date.now()}`, name, createdAt: Date.now() };
-    const updated = [...adminList, newAdmin];
-    saveAdminList(updated);
-    setAdminList(updated);
-    setNewAdminName("");
-    toast({ title: `${name} added as admin` });
+    const addr = newAdminAddress.trim();
+    if (!addr) return;
+    if (!addr.startsWith("0x") || addr.length !== 42) {
+      toast({ title: "Invalid wallet address", description: "Must be a valid 0x... address (42 chars)", variant: "destructive" });
+      return;
+    }
+    const success = addAdminWallet(addr);
+    if (success) {
+      setAdminWallets(getAdminWallets());
+      setNewAdminAddress("");
+      toast({ title: "Admin added", description: `${addr.slice(0, 6)}...${addr.slice(-4)}` });
+    } else {
+      toast({ title: "Already an admin or invalid address", variant: "destructive" });
+    }
   };
 
-  const handleRemoveAdmin = (id: string) => {
-    if (id === "primary") { toast({ title: "Cannot remove primary admin", variant: "destructive" }); return; }
-    const updated = adminList.filter((a) => a.id !== id);
-    saveAdminList(updated);
-    setAdminList(updated);
+  const handleRemoveAdmin = (addr: string) => {
+    if (isEnvAdmin(addr)) {
+      toast({ title: "Cannot remove env-defined admin", description: "This admin is set in the .env file", variant: "destructive" });
+      return;
+    }
+    removeAdminWallet(addr);
+    setAdminWallets(getAdminWallets());
     toast({ title: "Admin removed" });
   };
-
-  if (!authenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm space-y-6">
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mx-auto mb-4">
-              <Shield size={28} className="text-primary-foreground" />
-            </div>
-            <h1 className="text-xl font-display font-bold text-foreground">Admin Access</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {isSetup ? "Enter your admin password" : "Set up your admin password"}
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <input type="password" placeholder="Password" value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary" />
-            {!isSetup && (
-              <input type="password" placeholder="Confirm Password" value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary" />
-            )}
-            <button onClick={handleLogin}
-              className="w-full gradient-primary text-primary-foreground font-display font-bold py-3 rounded-xl hover:opacity-90 transition-opacity">
-              {isSetup ? "Login" : "Create Admin"}
-            </button>
-          </div>
-
-          <Link to="/" className="block text-center text-sm text-muted-foreground hover:text-foreground transition-colors">
-            ← Back to Wallet
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background pb-12">
       <div className="max-w-lg mx-auto px-4 pt-6">
         <div className="flex items-center justify-between mb-6">
-          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/settings" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={20} />
             <span className="font-medium">Back</span>
           </Link>
           <span className="text-xs text-muted-foreground">v{APP_VERSION}</span>
         </div>
 
-        <h1 className="text-xl font-display font-bold text-foreground mb-4">Admin Panel</h1>
+        <h1 className="text-xl font-display font-bold text-foreground mb-2">Admin Panel</h1>
+        <p className="text-xs text-muted-foreground mb-4">
+          Logged in as: {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+        </p>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
@@ -199,18 +121,17 @@ const Admin = () => {
 
         {activeTab === "network" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            {/* Network Info */}
             <div className="bg-card rounded-xl p-4 space-y-3">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Globe size={16} className="text-primary" /> Network Details
               </h2>
               {[
-                { label: "Network Name", key: "name" as const, icon: Globe },
-                { label: "Symbol", key: "symbol" as const, icon: Coins },
-                { label: "Chain ID", key: "chainId" as const, icon: Hash },
-                { label: "Chain ID (Hex)", key: "chainIdHex" as const, icon: Hash },
-                { label: "Decimals", key: "decimals" as const, icon: Hash },
-                { label: "Block Explorer", key: "blockExplorer" as const, icon: Globe },
+                { label: "Network Name", key: "name" as const },
+                { label: "Symbol", key: "symbol" as const },
+                { label: "Chain ID", key: "chainId" as const },
+                { label: "Chain ID (Hex)", key: "chainIdHex" as const },
+                { label: "Decimals", key: "decimals" as const },
+                { label: "Block Explorer", key: "blockExplorer" as const },
               ].map((field) => (
                 <div key={field.key} className="space-y-1">
                   <label className="text-xs text-muted-foreground">{field.label}</label>
@@ -224,7 +145,6 @@ const Admin = () => {
               ))}
             </div>
 
-            {/* RPC URLs */}
             <div className="bg-card rounded-xl p-4 space-y-3">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Server size={16} className="text-primary" /> RPC Endpoints
@@ -263,23 +183,26 @@ const Admin = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="bg-card rounded-xl p-4 space-y-3">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Users size={16} className="text-primary" /> Admin Users
+                <Users size={16} className="text-primary" /> Admin Wallets
               </h2>
-              <p className="text-xs text-muted-foreground">Manage who can access the admin panel and modify network settings.</p>
+              <p className="text-xs text-muted-foreground">
+                Only these wallet addresses can access the admin panel. Env-defined admins cannot be removed.
+              </p>
 
-              {adminList.map((admin) => (
-                <div key={admin.id} className="flex items-center gap-3 bg-secondary/50 rounded-lg px-3 py-3">
+              {adminWallets.map((addr) => (
+                <div key={addr} className="flex items-center gap-3 bg-secondary/50 rounded-lg px-3 py-3">
                   <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
-                    {admin.name.charAt(0).toUpperCase()}
+                    {addr.slice(2, 4).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">{admin.name}</p>
+                    <p className="text-sm font-mono text-foreground truncate">{addr}</p>
                     <p className="text-xs text-muted-foreground">
-                      {admin.id === "primary" ? "Primary Admin" : `Added ${new Date(admin.createdAt).toLocaleDateString()}`}
+                      {isEnvAdmin(addr) ? "🔒 Env-defined" : "Runtime admin"}
+                      {addr.toLowerCase() === walletAddress?.toLowerCase() ? " (you)" : ""}
                     </p>
                   </div>
-                  {admin.id !== "primary" && (
-                    <button onClick={() => handleRemoveAdmin(admin.id)}
+                  {!isEnvAdmin(addr) && (
+                    <button onClick={() => handleRemoveAdmin(addr)}
                       className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 transition-colors">
                       <Trash2 size={14} />
                     </button>
@@ -288,12 +211,19 @@ const Admin = () => {
               ))}
 
               <div className="flex gap-2 pt-2">
-                <input value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} placeholder="Admin name"
+                <input value={newAdminAddress} onChange={(e) => setNewAdminAddress(e.target.value)} placeholder="0x... wallet address"
                   onKeyDown={(e) => e.key === "Enter" && handleAddAdmin()}
-                  className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary" />
+                  className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary" />
                 <button onClick={handleAddAdmin} className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground shrink-0">
                   <UserPlus size={18} />
                 </button>
+              </div>
+
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10 mt-2">
+                <AlertTriangle size={14} className="text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  To add permanent admin wallets, set <code className="text-primary">VITE_ADMIN_WALLETS</code> in your .env file (comma-separated).
+                </p>
               </div>
             </div>
           </motion.div>
