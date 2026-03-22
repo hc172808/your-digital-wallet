@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { APP_VERSION } from "@/lib/network-config";
 import { getWalletAddress, deleteWallet } from "@/lib/wallet-core";
 import { getAutoLockTimeout, setAutoLockTimeout, AUTO_LOCK_OPTIONS, lockSession } from "@/lib/session-lock";
+import { isAdminWallet } from "@/lib/admin-auth";
 
 type SettingsPanel = null | "profile" | "security" | "notifications" | "appearance" | "help";
 
@@ -22,6 +23,7 @@ const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const walletAddress = getWalletAddress();
+  const showAdmin = isAdminWallet(walletAddress);
 
   const SETTINGS = [
     { icon: Wallet, label: "Wallet", desc: "Export, import, backup", panel: "profile" as SettingsPanel },
@@ -284,9 +286,11 @@ const Settings = () => {
                   <Link to="/network" className="flex items-center gap-1 hover:text-foreground transition-colors">
                     <Globe size={12} /> Network
                   </Link>
-                  <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
-                    <Shield size={12} /> Admin
-                  </Link>
+                  {showAdmin && (
+                    <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      <Shield size={12} /> Admin
+                    </Link>
+                  )}
                 </div>
               </div>
             </motion.div>
