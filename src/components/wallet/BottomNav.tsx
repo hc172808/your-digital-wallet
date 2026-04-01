@@ -1,11 +1,11 @@
-import { Home, ArrowUpRight, ArrowDownLeft, ArrowDownUp, Clock, Settings } from "lucide-react";
+import { Home, ArrowUpRight, ArrowDownLeft, ArrowDownUp, Clock, Image } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 
 const TABS = [
   { icon: Home, label: "Home", path: "/" },
   { icon: ArrowUpRight, label: "Send", path: "/send" },
   { icon: ArrowDownUp, label: "Swap", path: "/swap" },
-  { icon: ArrowDownLeft, label: "Receive", path: "/receive" },
+  { icon: Image, label: "NFTs", path: "/nfts" },
   { icon: Clock, label: "History", path: "/history" },
 ];
 
