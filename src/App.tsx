@@ -16,6 +16,8 @@ import Admin from "./pages/Admin";
 import TokenDetail from "./pages/TokenDetail";
 import WalletSetup from "./pages/WalletSetup";
 import WalletExport from "./pages/WalletExport";
+import NFTGallery from "./pages/NFTGallery";
+import ConnectedApps from "./pages/ConnectedApps";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +45,8 @@ const App = () => (
             <Route path="/wallet-export" element={<ProtectedRoute><WalletExport /></ProtectedRoute>} />
             <Route path="/network" element={<ProtectedRoute><Network /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/nfts" element={<ProtectedRoute><NFTGallery /></ProtectedRoute>} />
+            <Route path="/connected-apps" element={<ProtectedRoute><ConnectedApps /></ProtectedRoute>} />
             <Route path="/token/:symbol" element={<ProtectedRoute><TokenDetail /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
