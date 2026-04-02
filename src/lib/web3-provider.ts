@@ -133,7 +133,6 @@ class GYDSProvider {
   // ── Internals ───────────────────────────────────────────
 
   private _findChainByDecimalId(id: number) {
-    const { SUPPORTED_CHAINS } = require("./chain-adapter") as typeof import("./chain-adapter");
     return SUPPORTED_CHAINS.find((c) => c.chainId === id);
   }
 
