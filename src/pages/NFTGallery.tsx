@@ -7,13 +7,12 @@ import { getActiveChainId } from "@/lib/chain-context";
 import { getChainById } from "@/lib/chain-adapter";
 import {
   type NFTMetadata,
-  fetchNfts,
   hideNft,
   unhideNft,
-  getHiddenNfts,
   getBurnAddress,
   resolveIpfs,
 } from "@/lib/nft-manager";
+import { fetchNftsFromIndexer, getNetworkEnvironment } from "@/lib/nft-indexer";
 import { useToast } from "@/hooks/use-toast";
 
 type FilterMode = "all" | "hidden" | "spam";
