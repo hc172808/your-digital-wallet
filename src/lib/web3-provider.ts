@@ -133,9 +133,8 @@ class GYDSProvider {
   // ── Internals ───────────────────────────────────────────
 
   private _findChainByDecimalId(id: number) {
-    // Dynamic import not needed — use the already-imported getChainById
-    const { SUPPORTED_CHAINS: chains } = await import("./chain-adapter");
-    return chains.find((c: { chainId?: number }) => c.chainId === id);
+    const { SUPPORTED_CHAINS } = require("./chain-adapter") as typeof import("./chain-adapter");
+    return SUPPORTED_CHAINS.find((c) => c.chainId === id);
   }
 
   private async _rpcForward(method: string, params: unknown[]): Promise<unknown> {
