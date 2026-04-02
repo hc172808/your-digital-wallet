@@ -27,10 +27,12 @@ const NFTGallery = () => {
   const chainId = getActiveChainId();
   const chain = getChainById(chainId);
 
+  const networkEnv = getNetworkEnvironment();
+
   useEffect(() => {
     if (!wallet || !chain) return;
     setLoading(true);
-    fetchNfts(wallet, chainId, chain.rpcUrls[0])
+    fetchNftsFromIndexer(wallet, chainId)
       .then(setNfts)
       .finally(() => setLoading(false));
   }, [wallet, chainId]);
