@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Globe, Link2, Server, CheckCircle2, XCircle, Loader2, Copy, ExternalLink, Blocks, Fuel, RefreshCw, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/wallet/BottomNav";
+import QrConnectScanner from "@/components/wallet/QrConnectScanner";
 import { getNetworkConfig, getActiveRpc } from "@/lib/network-config";
 import { useToast } from "@/hooks/use-toast";
 
@@ -198,6 +199,16 @@ const Network = () => {
               <p className="text-sm text-muted-foreground">Unavailable</p>
             )}
           </div>
+        </motion.div>
+
+        {/* QR Scan to Connect */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.07 }}
+          className="mb-4"
+        >
+          <QrConnectScanner onConnect={() => window.location.reload()} />
         </motion.div>
 
         {/* Add to MetaMask */}

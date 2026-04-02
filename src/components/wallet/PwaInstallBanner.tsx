@@ -1,19 +1,48 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, X } from "lucide-react";
+import { Download, X, Share } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+const isIos = (): boolean => {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream;
+};
+
+const isInStandaloneMode = (): boolean => {
+  return (
+    ("standalone" in window.navigator && (window.navigator as any).standalone === true) ||
+    window.matchMedia("(display-mode: standalone)").matches
+  );
+};
+
 const PwaInstallBanner = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showIosBanner, setShowIosBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    const hidden = sessionStorage.getItem("pwa_banner_dismissed");
-    if (hidden) setDismissed(true);
+    // Don't show if already installed as PWA
+    if (isInStandaloneMode()) return;
+
+    const hidden = localStorage.getItem("pwa_banner_dismissed");
+    if (hidden) {
+      // Re-show after 3 days
+      const ts = parseInt(hidden, 10);
+      if (Date.now() - ts < 3 * 24 * 60 * 60 * 1000) {
+        setDismissed(true);
+        return;
+      }
+    }
+
+    // iOS: no beforeinstallprompt event, show manual instructions
+    if (isIos()) {
+      // Delay to avoid showing immediately on first visit
+      const timer = setTimeout(() => setShowIosBanner(true), 3000);
+      return () => clearTimeout(timer);
+    }
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -28,15 +57,17 @@ const PwaInstallBanner = () => {
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") setDeferredPrompt(null);
-    setDismissed(true);
+    handleDismiss();
   };
 
   const handleDismiss = () => {
     setDismissed(true);
-    sessionStorage.setItem("pwa_banner_dismissed", "1");
+    setShowIosBanner(false);
+    localStorage.setItem("pwa_banner_dismissed", String(Date.now()));
   };
 
-  if (!deferredPrompt || dismissed) return null;
+  // Nothing to show
+  if (dismissed || (!deferredPrompt && !showIosBanner)) return null;
 
   return (
     <AnimatePresence>
@@ -48,18 +79,26 @@ const PwaInstallBanner = () => {
       >
         <div className="bg-card border border-border rounded-2xl p-4 shadow-xl flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shrink-0">
-            <Download size={20} className="text-primary-foreground" />
+            {showIosBanner ? <Share size={20} className="text-primary-foreground" /> : <Download size={20} className="text-primary-foreground" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">Install GYDS Wallet</p>
-            <p className="text-xs text-muted-foreground">Add to home screen for the best experience</p>
+            {showIosBanner ? (
+              <p className="text-xs text-muted-foreground">
+                Tap <Share size={12} className="inline -mt-0.5" /> then "Add to Home Screen"
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Add to home screen for the best experience</p>
+            )}
           </div>
-          <button
-            onClick={handleInstall}
-            className="px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold shrink-0 active:scale-[0.97] transition-transform"
-          >
-            Install
-          </button>
+          {!showIosBanner && (
+            <button
+              onClick={handleInstall}
+              className="px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold shrink-0 active:scale-[0.97] transition-transform"
+            >
+              Install
+            </button>
+          )}
           <button onClick={handleDismiss} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
             <X size={16} />
           </button>
