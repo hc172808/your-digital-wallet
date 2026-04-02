@@ -7,13 +7,12 @@ import { getActiveChainId } from "@/lib/chain-context";
 import { getChainById } from "@/lib/chain-adapter";
 import {
   type NFTMetadata,
-  fetchNfts,
   hideNft,
   unhideNft,
-  getHiddenNfts,
   getBurnAddress,
   resolveIpfs,
 } from "@/lib/nft-manager";
+import { fetchNftsFromIndexer, getNetworkEnvironment } from "@/lib/nft-indexer";
 import { useToast } from "@/hooks/use-toast";
 
 type FilterMode = "all" | "hidden" | "spam";
@@ -28,10 +27,12 @@ const NFTGallery = () => {
   const chainId = getActiveChainId();
   const chain = getChainById(chainId);
 
+  const networkEnv = getNetworkEnvironment();
+
   useEffect(() => {
     if (!wallet || !chain) return;
     setLoading(true);
-    fetchNfts(wallet, chainId, chain.rpcUrls[0])
+    fetchNftsFromIndexer(wallet, chainId)
       .then(setNfts)
       .finally(() => setLoading(false));
   }, [wallet, chainId]);
@@ -73,9 +74,14 @@ const NFTGallery = () => {
       <div className="max-w-lg mx-auto px-4 pt-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-display font-bold text-foreground">NFT Gallery</h1>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span className="w-2 h-2 rounded-full gradient-primary" />
-            {chain?.name || "GYDS"}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="w-2 h-2 rounded-full gradient-primary" />
+              {chain?.name || "GYDS"}
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground uppercase">
+              {networkEnv}
+            </span>
           </div>
         </div>
 

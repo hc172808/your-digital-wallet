@@ -15,7 +15,7 @@ const CHAIN_ICONS: Record<string, string> = {
   gyds: "G",
   ethereum: "Ξ",
   polygon: "P",
-  solana: "S",
+  solana: "◎",
 };
 
 interface ChainSelectorProps {
@@ -29,8 +29,7 @@ const ChainSelector = ({ onChainChange }: ChainSelectorProps) => {
 
   const activeChain = SUPPORTED_CHAINS.find((c) => c.id === activeId) || SUPPORTED_CHAINS[0];
 
-  // Only show EVM chains for now (Solana is stub)
-  const availableChains = SUPPORTED_CHAINS.filter((c) => c.type === "evm");
+  const availableChains = SUPPORTED_CHAINS;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

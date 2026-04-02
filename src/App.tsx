@@ -4,7 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { hasWallet } from "@/lib/wallet-core";
+import { injectWeb3Provider } from "@/lib/web3-provider";
 import SessionLockGuard from "@/components/wallet/SessionLockGuard";
+
+// Inject window.ethereum on load
+injectWeb3Provider();
 import Index from "./pages/Index";
 import Send from "./pages/Send";
 import Swap from "./pages/Swap";
