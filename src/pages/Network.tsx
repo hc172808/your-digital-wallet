@@ -201,6 +201,16 @@ const Network = () => {
           </div>
         </motion.div>
 
+        {/* QR Scan to Connect */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.07 }}
+          className="mb-4"
+        >
+          <QrConnectScanner onConnect={() => window.location.reload()} />
+        </motion.div>
+
         {/* Add to MetaMask */}
         <motion.button
           initial={{ opacity: 0, y: 20 }}
