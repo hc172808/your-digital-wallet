@@ -15,7 +15,7 @@ const CHAIN_ICONS: Record<string, string> = {
   gyds: "G",
   ethereum: "Ξ",
   polygon: "P",
-  solana: "S",
+  solana: "◎",
 };
 
 interface ChainSelectorProps {

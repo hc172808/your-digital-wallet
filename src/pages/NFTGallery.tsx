@@ -74,9 +74,14 @@ const NFTGallery = () => {
       <div className="max-w-lg mx-auto px-4 pt-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-display font-bold text-foreground">NFT Gallery</h1>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span className="w-2 h-2 rounded-full gradient-primary" />
-            {chain?.name || "GYDS"}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="w-2 h-2 rounded-full gradient-primary" />
+              {chain?.name || "GYDS"}
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground uppercase">
+              {networkEnv}
+            </span>
           </div>
         </div>
 
