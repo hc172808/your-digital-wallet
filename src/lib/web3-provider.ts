@@ -5,7 +5,7 @@
 
 import { getWalletAddress } from "./wallet-core";
 import { getActiveChainId } from "./chain-context";
-import { getChainById } from "./chain-adapter";
+import { getChainById, SUPPORTED_CHAINS } from "./chain-adapter";
 import { addPendingRequest, getSession, saveSession, type DAppSession } from "./dapp-connector";
 
 interface EthereumRequest {
