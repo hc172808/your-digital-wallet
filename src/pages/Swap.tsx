@@ -242,19 +242,14 @@ const Swap = () => {
               <p className="flex-1 text-2xl font-display font-bold text-foreground">
                 {quote?.toAmount || <span className="text-muted-foreground/40">0.00</span>}
               </p>
-              <div className="relative">
-                <button
-                  onClick={() => { setShowToPicker(!showToPicker); setShowFromPicker(false); }}
-                  className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
-                >
-                  <CoinIcon symbol={toToken.symbol} size={24} fallbackColor={toToken.color} />
-                  <span className="font-semibold text-foreground text-sm">{toToken.symbol}</span>
-                  <ChevronDown size={14} className="text-muted-foreground" />
-                </button>
-                {showToPicker && (
-                  <TokenPicker onSelect={setToToken} exclude={fromToken.symbol} onClose={() => setShowToPicker(false)} />
-                )}
-              </div>
+              <button
+                onClick={() => { setShowToPicker(!showToPicker); setShowFromPicker(false); }}
+                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
+              >
+                <CoinIcon symbol={toToken.symbol} size={24} fallbackColor={toToken.color} />
+                <span className="font-semibold text-foreground text-sm">{toToken.symbol}</span>
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </button>
             </div>
             {quote && toPrice > 0 && (
               <p className="text-xs text-muted-foreground mt-2">
