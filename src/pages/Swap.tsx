@@ -310,6 +310,18 @@ const Swap = () => {
         </motion.div>
       </div>
 
+      {/* Token pickers (full-screen modals) */}
+      <AnimatePresence>
+        {showFromPicker && (
+          <TokenPicker onSelect={setFromToken} exclude={toToken.symbol} onClose={() => setShowFromPicker(false)} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showToPicker && (
+          <TokenPicker onSelect={setToToken} exclude={fromToken.symbol} onClose={() => setShowToPicker(false)} />
+        )}
+      </AnimatePresence>
+
       {/* Confirm modal */}
       <SwapConfirmModal
         open={confirmOpen}
