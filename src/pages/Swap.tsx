@@ -210,7 +210,7 @@ const Swap = () => {
               />
               <button
                 onClick={() => { setShowFromPicker(!showFromPicker); setShowToPicker(false); }}
-                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
+                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 shrink-0"
               >
                 <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
                 <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
