@@ -100,27 +100,43 @@ const Swap = () => {
 
   const TokenPicker = ({ onSelect, exclude, onClose }: { onSelect: (t: SwapToken) => void; exclude: string; onClose: () => void }) => (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-      className="absolute inset-x-0 top-full mt-2 bg-card border border-border rounded-xl p-2 z-50 shadow-xl max-h-64 overflow-y-auto"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
+      onClick={onClose}
     >
-      {SWAP_TOKENS.filter((t) => t.symbol !== exclude).map((token) => (
-        <button
-          key={token.symbol}
-          onClick={() => { onSelect(token); onClose(); }}
-          className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-secondary/50 transition-colors"
-        >
-          <CoinIcon symbol={token.symbol} size={32} fallbackColor={token.color} />
-          <div className="text-left">
-            <p className="text-sm font-semibold text-foreground">{token.symbol}</p>
-            <p className="text-xs text-muted-foreground">{token.name}</p>
-          </div>
-          <p className="ml-auto text-xs text-muted-foreground">
-            {prices[token.symbol] ? formatPrice(prices[token.symbol]) : "—"}
-          </p>
-        </button>
-      ))}
+      <motion.div
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="w-full max-w-lg bg-card border-t border-border rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-foreground">Select Token</p>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+        </div>
+        <div className="space-y-1">
+          {SWAP_TOKENS.filter((t) => t.symbol !== exclude).map((token) => (
+            <button
+              key={token.symbol}
+              onClick={() => { onSelect(token); onClose(); }}
+              className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+            >
+              <CoinIcon symbol={token.symbol} size={36} fallbackColor={token.color} />
+              <div className="text-left flex-1">
+                <p className="text-sm font-semibold text-foreground">{token.symbol}</p>
+                <p className="text-xs text-muted-foreground">{token.name}</p>
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">
+                {prices[token.symbol] ? formatPrice(prices[token.symbol]) : "—"}
+              </p>
+            </button>
+          ))}
+        </div>
+      </motion.div>
     </motion.div>
   );
 
@@ -182,7 +198,7 @@ const Swap = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
           {/* From */}
-          <div className="bg-card rounded-xl p-4 relative">
+          <div className="bg-card rounded-xl p-4">
             <p className="text-xs text-muted-foreground mb-2">You Pay</p>
             <div className="flex items-center gap-3">
               <input
@@ -192,19 +208,14 @@ const Swap = () => {
                 onChange={(e) => setFromAmount(e.target.value)}
                 className="flex-1 bg-transparent text-2xl font-display font-bold text-foreground outline-none placeholder:text-muted-foreground/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <div className="relative">
-                <button
-                  onClick={() => { setShowFromPicker(!showFromPicker); setShowToPicker(false); }}
-                  className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
-                >
-                  <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
-                  <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
-                  <ChevronDown size={14} className="text-muted-foreground" />
-                </button>
-                {showFromPicker && (
-                  <TokenPicker onSelect={setFromToken} exclude={toToken.symbol} onClose={() => setShowFromPicker(false)} />
-                )}
-              </div>
+              <button
+                onClick={() => { setShowFromPicker(!showFromPicker); setShowToPicker(false); }}
+                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 shrink-0"
+              >
+                <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
+                <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </button>
             </div>
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-muted-foreground">≈ ${usdValue}</p>
@@ -225,25 +236,20 @@ const Swap = () => {
           </div>
 
           {/* To */}
-          <div className="bg-card rounded-xl p-4 relative">
+          <div className="bg-card rounded-xl p-4">
             <p className="text-xs text-muted-foreground mb-2">You Receive</p>
             <div className="flex items-center gap-3">
               <p className="flex-1 text-2xl font-display font-bold text-foreground">
                 {quote?.toAmount || <span className="text-muted-foreground/40">0.00</span>}
               </p>
-              <div className="relative">
-                <button
-                  onClick={() => { setShowToPicker(!showToPicker); setShowFromPicker(false); }}
-                  className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
-                >
-                  <CoinIcon symbol={toToken.symbol} size={24} fallbackColor={toToken.color} />
-                  <span className="font-semibold text-foreground text-sm">{toToken.symbol}</span>
-                  <ChevronDown size={14} className="text-muted-foreground" />
-                </button>
-                {showToPicker && (
-                  <TokenPicker onSelect={setToToken} exclude={fromToken.symbol} onClose={() => setShowToPicker(false)} />
-                )}
-              </div>
+              <button
+                onClick={() => { setShowToPicker(!showToPicker); setShowFromPicker(false); }}
+                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 shrink-0"
+              >
+                <CoinIcon symbol={toToken.symbol} size={24} fallbackColor={toToken.color} />
+                <span className="font-semibold text-foreground text-sm">{toToken.symbol}</span>
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </button>
             </div>
             {quote && toPrice > 0 && (
               <p className="text-xs text-muted-foreground mt-2">
@@ -303,6 +309,18 @@ const Swap = () => {
           </button>
         </motion.div>
       </div>
+
+      {/* Token pickers (full-screen modals) */}
+      <AnimatePresence>
+        {showFromPicker && (
+          <TokenPicker onSelect={setFromToken} exclude={toToken.symbol} onClose={() => setShowFromPicker(false)} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showToPicker && (
+          <TokenPicker onSelect={setToToken} exclude={fromToken.symbol} onClose={() => setShowToPicker(false)} />
+        )}
+      </AnimatePresence>
 
       {/* Confirm modal */}
       <SwapConfirmModal

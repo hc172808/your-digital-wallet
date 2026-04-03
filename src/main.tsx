@@ -18,11 +18,14 @@ if (isPreviewHost || isInIframe) {
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Dismiss splash screen after app renders
-requestAnimationFrame(() => {
+// Dismiss splash screen after app renders (with fallback timeout)
+const dismissSplash = () => {
   const splash = document.getElementById("splash-screen");
-  if (splash) {
+  if (splash && !splash.classList.contains("hide")) {
     splash.classList.add("hide");
     setTimeout(() => splash.remove(), 600);
   }
-});
+};
+requestAnimationFrame(dismissSplash);
+// Fallback: always dismiss after 3s even if render is slow
+setTimeout(dismissSplash, 3000);

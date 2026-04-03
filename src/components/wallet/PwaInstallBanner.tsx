@@ -18,18 +18,21 @@ const isInStandaloneMode = (): boolean => {
   );
 };
 
+const isInIframe = (): boolean => {
+  try { return window.self !== window.top; } catch { return true; }
+};
+
 const PwaInstallBanner = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIosBanner, setShowIosBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Don't show if already installed as PWA
-    if (isInStandaloneMode()) return;
+    // Don't show in iframes, preview, or standalone mode
+    if (isInIframe() || isInStandaloneMode()) return;
 
     const hidden = localStorage.getItem("pwa_banner_dismissed");
     if (hidden) {
-      // Re-show after 3 days
       const ts = parseInt(hidden, 10);
       if (Date.now() - ts < 3 * 24 * 60 * 60 * 1000) {
         setDismissed(true);
@@ -37,19 +40,32 @@ const PwaInstallBanner = () => {
       }
     }
 
-    // iOS: no beforeinstallprompt event, show manual instructions
+    // iOS: show manual instructions after delay
     if (isIos()) {
-      // Delay to avoid showing immediately on first visit
-      const timer = setTimeout(() => setShowIosBanner(true), 3000);
+      const timer = setTimeout(() => setShowIosBanner(true), 2000);
       return () => clearTimeout(timer);
     }
 
+    // Android/Desktop: listen for beforeinstallprompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+
+    // Fallback: if no prompt fires after 3s on mobile, show iOS-style banner
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    const isMobile = /android|mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      fallbackTimer = setTimeout(() => {
+        if (!deferredPrompt) setShowIosBanner(true);
+      }, 4000);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+    };
   }, []);
 
   const handleInstall = async () => {
