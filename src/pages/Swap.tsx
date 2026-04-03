@@ -244,7 +244,7 @@ const Swap = () => {
               </p>
               <button
                 onClick={() => { setShowToPicker(!showToPicker); setShowFromPicker(false); }}
-                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
+                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 shrink-0"
               >
                 <CoinIcon symbol={toToken.symbol} size={24} fallbackColor={toToken.color} />
                 <span className="font-semibold text-foreground text-sm">{toToken.symbol}</span>
