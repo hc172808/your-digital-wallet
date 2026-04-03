@@ -18,6 +18,10 @@ const isInStandaloneMode = (): boolean => {
   );
 };
 
+const isInIframe = (): boolean => {
+  try { return window.self !== window.top; } catch { return true; }
+};
+
 const PwaInstallBanner = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIosBanner, setShowIosBanner] = useState(false);
