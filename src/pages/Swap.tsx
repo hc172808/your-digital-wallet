@@ -236,7 +236,7 @@ const Swap = () => {
           </div>
 
           {/* To */}
-          <div className="bg-card rounded-xl p-4 relative">
+          <div className="bg-card rounded-xl p-4">
             <p className="text-xs text-muted-foreground mb-2">You Receive</p>
             <div className="flex items-center gap-3">
               <p className="flex-1 text-2xl font-display font-bold text-foreground">
