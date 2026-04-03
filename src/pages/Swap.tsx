@@ -198,7 +198,7 @@ const Swap = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
           {/* From */}
-          <div className="bg-card rounded-xl p-4 relative">
+          <div className="bg-card rounded-xl p-4">
             <p className="text-xs text-muted-foreground mb-2">You Pay</p>
             <div className="flex items-center gap-3">
               <input
@@ -208,19 +208,14 @@ const Swap = () => {
                 onChange={(e) => setFromAmount(e.target.value)}
                 className="flex-1 bg-transparent text-2xl font-display font-bold text-foreground outline-none placeholder:text-muted-foreground/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <div className="relative">
-                <button
-                  onClick={() => { setShowFromPicker(!showFromPicker); setShowToPicker(false); }}
-                  className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
-                >
-                  <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
-                  <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
-                  <ChevronDown size={14} className="text-muted-foreground" />
-                </button>
-                {showFromPicker && (
-                  <TokenPicker onSelect={setFromToken} exclude={toToken.symbol} onClose={() => setShowFromPicker(false)} />
-                )}
-              </div>
+              <button
+                onClick={() => { setShowFromPicker(!showFromPicker); setShowToPicker(false); }}
+                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2"
+              >
+                <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
+                <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </button>
             </div>
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-muted-foreground">≈ ${usdValue}</p>
