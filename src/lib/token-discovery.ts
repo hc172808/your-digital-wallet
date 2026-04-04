@@ -106,7 +106,6 @@ export function importDiscoveredToken(token: DiscoveredToken): void {
     contractAddress: token.contractAddress,
     decimals: token.decimals,
     color: token.color,
-    addedAt: Date.now(),
   };
   saveCustomToken(custom);
 }
