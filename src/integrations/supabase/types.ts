@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      token_chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          token_symbol: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          token_symbol: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          token_symbol?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      token_chat_presence: {
+        Row: {
+          id: string
+          last_seen: string
+          token_symbol: string
+          wallet_address: string
+        }
+        Insert: {
+          id?: string
+          last_seen?: string
+          token_symbol: string
+          wallet_address: string
+        }
+        Update: {
+          id?: string
+          last_seen?: string
+          token_symbol?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      wallet_follows: {
+        Row: {
+          created_at: string
+          follower_address: string
+          following_address: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_address: string
+          following_address: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_address?: string
+          following_address?: string
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
