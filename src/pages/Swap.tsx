@@ -164,15 +164,15 @@ const Swap = () => {
                 placeholder="0.00"
                 value={fromAmount}
                 onChange={(e) => setFromAmount(e.target.value)}
-                className="flex-1 bg-transparent text-2xl font-display font-bold text-foreground outline-none placeholder:text-muted-foreground/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="flex-1 min-w-0 bg-transparent text-2xl font-display font-bold text-foreground outline-none placeholder:text-muted-foreground/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <button
                 onClick={() => setPickerMode("from")}
-                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 shrink-0"
+                className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 shrink-0 min-w-[100px] justify-center hover:bg-secondary/80 active:scale-95 transition-all"
               >
-                <CoinIcon symbol={fromToken.symbol} size={24} fallbackColor={fromToken.color} />
-                <span className="font-semibold text-foreground text-sm">{fromToken.symbol}</span>
-                <ChevronDown size={14} className="text-muted-foreground" />
+                <CoinIcon symbol={fromToken.symbol} size={22} fallbackColor={fromToken.color} />
+                <span className="font-semibold text-foreground text-sm whitespace-nowrap">{fromToken.symbol}</span>
+                <ChevronDown size={14} className="text-muted-foreground shrink-0" />
               </button>
             </div>
             <div className="flex items-center justify-between mt-2">

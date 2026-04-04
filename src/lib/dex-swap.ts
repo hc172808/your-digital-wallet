@@ -26,11 +26,18 @@ export const SWAP_TOKENS: SwapToken[] = [
   { symbol: "GYDS", name: "GYDS (Native)", contractAddress: null, decimals: 18, color: "from-cyan-400 to-teal-500" },
   { symbol: "GYD", name: "GYD Stablecoin", contractAddress: null, decimals: 18, color: "from-sky-400 to-cyan-500" },
   { symbol: "ETH", name: "Ethereum", contractAddress: null, decimals: 18, color: "from-blue-400 to-indigo-500" },
-  { symbol: "USDT", name: "Tether", contractAddress: null, decimals: 6, color: "from-emerald-400 to-green-500" },
+  { symbol: "USDT", name: "Tether", contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6, color: "from-emerald-400 to-green-500" },
+  { symbol: "USDC", name: "USD Coin", contractAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6, color: "from-blue-500 to-cyan-400" },
+  { symbol: "DAI", name: "Dai Stablecoin", contractAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F", decimals: 18, color: "from-amber-400 to-yellow-500" },
   { symbol: "BTC", name: "Bitcoin", contractAddress: null, decimals: 8, color: "from-amber-500 to-orange-500" },
+  { symbol: "WBTC", name: "Wrapped Bitcoin", contractAddress: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", decimals: 8, color: "from-orange-400 to-amber-600" },
   { symbol: "SOL", name: "Solana", contractAddress: null, decimals: 9, color: "from-purple-500 to-fuchsia-500" },
   { symbol: "AVAX", name: "Avalanche", contractAddress: null, decimals: 18, color: "from-red-400 to-rose-500" },
   { symbol: "MATIC", name: "Polygon", contractAddress: null, decimals: 18, color: "from-violet-500 to-purple-500" },
+  { symbol: "LINK", name: "Chainlink", contractAddress: "0x514910771AF9Ca656af840dff83E8264EcF986CA", decimals: 18, color: "from-blue-600 to-indigo-400" },
+  { symbol: "UNI", name: "Uniswap", contractAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", decimals: 18, color: "from-pink-500 to-rose-400" },
+  { symbol: "AAVE", name: "Aave", contractAddress: "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", decimals: 18, color: "from-purple-400 to-indigo-500" },
+  { symbol: "CRV", name: "Curve DAO", contractAddress: "0xD533a949740bb3306d119CC777fa900bA034cd52", decimals: 18, color: "from-yellow-500 to-red-500" },
 ];
 
 // Fetch live prices from CoinGecko
