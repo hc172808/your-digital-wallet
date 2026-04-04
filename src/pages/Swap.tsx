@@ -202,11 +202,11 @@ const Swap = () => {
               </p>
               <button
                 onClick={() => setPickerMode("to")}
-                className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 shrink-0"
+                className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2.5 shrink-0 min-w-[100px] justify-center hover:bg-secondary/80 active:scale-95 transition-all"
               >
-                <CoinIcon symbol={toToken.symbol} size={24} fallbackColor={toToken.color} />
-                <span className="font-semibold text-foreground text-sm">{toToken.symbol}</span>
-                <ChevronDown size={14} className="text-muted-foreground" />
+                <CoinIcon symbol={toToken.symbol} size={22} fallbackColor={toToken.color} />
+                <span className="font-semibold text-foreground text-sm whitespace-nowrap">{toToken.symbol}</span>
+                <ChevronDown size={14} className="text-muted-foreground shrink-0" />
               </button>
             </div>
             {quote && toPrice > 0 && (
