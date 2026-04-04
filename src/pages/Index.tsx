@@ -45,6 +45,7 @@ const Index = () => {
 
         <div className="mb-8" key={`bal-${chainKey}`}><BalanceCard /></div>
         <div className="mb-8"><PortfolioChart /></div>
+        <TokenDiscovery onTokensChanged={() => setChainKey((k) => k + 1)} />
         <div className="mb-8" key={`assets-${chainKey}`}><AssetsList /></div>
         <div className="mb-8"><RecentTransactions /></div>
       </div>
