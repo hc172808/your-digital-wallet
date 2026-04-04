@@ -7,6 +7,7 @@ import BottomNav from "@/components/wallet/BottomNav";
 import PwaInstallBanner from "@/components/wallet/PwaInstallBanner";
 import AccountSwitcher from "@/components/wallet/AccountSwitcher";
 import ChainSelector from "@/components/wallet/ChainSelector";
+import TokenDiscovery from "@/components/wallet/TokenDiscovery";
 import { Bell, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { initializeAccounts } from "@/lib/multi-account";
