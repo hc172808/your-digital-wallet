@@ -74,7 +74,7 @@ const Buy = () => {
                   selected === coin.symbol ? "bg-primary/15 ring-1 ring-primary" : "bg-secondary hover:bg-secondary/80"
                 }`}
               >
-                <CoinIcon symbol={coin.symbol} size="sm" />
+                <CoinIcon symbol={coin.symbol} size={28} />
                 <span className="text-xs font-semibold text-foreground">{coin.symbol}</span>
                 <span className="text-[10px] text-muted-foreground">{coin.price}</span>
               </button>

@@ -52,7 +52,7 @@ const Perps = () => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <CoinIcon symbol={selectedPair.symbol} size="md" />
+                <CoinIcon symbol={selectedPair.symbol} size={36} />
                 <span className="font-bold text-foreground">{selectedPair.name}</span>
               </div>
               <p className="text-2xl font-bold text-foreground">${selectedPair.price.toLocaleString()}</p>

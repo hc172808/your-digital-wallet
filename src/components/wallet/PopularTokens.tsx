@@ -37,7 +37,7 @@ const PopularTokens = () => {
               onClick={() => navigate(`/token/${token.symbol}`)}
               className="w-full flex items-center gap-3 p-3 bg-card rounded-xl hover:bg-card/80 transition-colors"
             >
-              <CoinIcon symbol={token.symbol} size="md" />
+              <CoinIcon symbol={token.symbol} size={36} />
               <div className="flex-1 text-left min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm text-foreground">{token.symbol}</span>
