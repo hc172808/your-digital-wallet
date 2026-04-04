@@ -8,6 +8,8 @@ const SYMBOL_TO_ID: Record<string, string> = {
   SOL: "solana",
   USDT: "tether",
   USDC: "usd-coin",
+  DAI: "dai",
+  WBTC: "wrapped-bitcoin",
   BNB: "binancecoin",
   XRP: "ripple",
   ADA: "cardano",
@@ -17,6 +19,12 @@ const SYMBOL_TO_ID: Record<string, string> = {
   AVAX: "avalanche-2",
   LINK: "chainlink",
   UNI: "uniswap",
+  AAVE: "aave",
+  CRV: "curve-dao-token",
+  SHIB: "shiba-inu",
+  PEPE: "pepe",
+  ARB: "arbitrum",
+  LDO: "lido-dao",
 };
 
 export interface PriceData {
