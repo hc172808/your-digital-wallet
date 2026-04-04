@@ -7,6 +7,7 @@ import BottomNav from "@/components/wallet/BottomNav";
 import PwaInstallBanner from "@/components/wallet/PwaInstallBanner";
 import AccountSwitcher from "@/components/wallet/AccountSwitcher";
 import ChainSelector from "@/components/wallet/ChainSelector";
+import TokenDiscovery from "@/components/wallet/TokenDiscovery";
 import { Bell, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { initializeAccounts } from "@/lib/multi-account";
@@ -44,6 +45,7 @@ const Index = () => {
 
         <div className="mb-8" key={`bal-${chainKey}`}><BalanceCard /></div>
         <div className="mb-8"><PortfolioChart /></div>
+        <TokenDiscovery onTokensChanged={() => setChainKey((k) => k + 1)} />
         <div className="mb-8" key={`assets-${chainKey}`}><AssetsList /></div>
         <div className="mb-8"><RecentTransactions /></div>
       </div>

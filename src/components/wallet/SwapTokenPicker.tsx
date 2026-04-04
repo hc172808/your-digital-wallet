@@ -28,10 +28,17 @@ const TOKEN_NETWORK_MAP: Record<string, NetworkId[]> = {
   GYD: ["gyds"],
   ETH: ["ethereum"],
   USDT: ["ethereum", "polygon", "solana"],
+  USDC: ["ethereum", "polygon", "solana"],
+  DAI: ["ethereum", "polygon"],
   BTC: ["ethereum"],
+  WBTC: ["ethereum", "polygon"],
   SOL: ["solana"],
   AVAX: ["ethereum"],
   MATIC: ["polygon"],
+  LINK: ["ethereum", "polygon"],
+  UNI: ["ethereum", "polygon"],
+  AAVE: ["ethereum", "polygon"],
+  CRV: ["ethereum"],
 };
 
 interface SwapTokenPickerProps {
