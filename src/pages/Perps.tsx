@@ -41,7 +41,7 @@ const Perps = () => {
                 selectedPair.symbol === p.symbol ? "bg-primary/15 ring-1 ring-primary" : "bg-card"
               }`}
             >
-              <CoinIcon symbol={p.symbol} size="xs" />
+              <CoinIcon symbol={p.symbol} size={20} />
               <span className="text-xs font-semibold text-foreground">{p.name}</span>
             </button>
           ))}
