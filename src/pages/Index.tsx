@@ -10,7 +10,7 @@ import AccountSwitcher from "@/components/wallet/AccountSwitcher";
 import ChainSelector from "@/components/wallet/ChainSelector";
 import TokenDiscovery from "@/components/wallet/TokenDiscovery";
 import PopularTokens from "@/components/wallet/PopularTokens";
-import { Bell, Settings, ShoppingCart, BarChart3, Layers, Shield, UserPlus, Wallet, Flame, Image } from "lucide-react";
+import { Bell, Settings, ShoppingCart, BarChart3, Layers, Shield, UserPlus, Wallet, Flame, Image, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { initializeAccounts } from "@/lib/multi-account";
 import { getWalletAddress } from "@/lib/wallet-core";
@@ -19,6 +19,7 @@ import { recordActivity } from "@/lib/session-lock";
 const QUICK_ACTIONS = [
   { icon: ShoppingCart, label: "Buy", path: "/buy", color: "from-green-400 to-emerald-500" },
   { icon: Flame, label: "Meme Rush", path: "/meme-rush", color: "from-orange-400 to-red-500" },
+  { icon: Zap, label: "Alpha", path: "/alpha", color: "from-yellow-400 to-amber-500" },
   { icon: Image, label: "NFTs", path: "/nfts", color: "from-fuchsia-400 to-pink-500" },
   { icon: BarChart3, label: "Perps", path: "/perps", color: "from-blue-400 to-indigo-500" },
   { icon: Layers, label: "Earn", path: "/earn", color: "from-purple-400 to-violet-500" },
