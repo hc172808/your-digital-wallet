@@ -117,7 +117,7 @@ const MemeRush = () => {
                 <div className="text-lg font-bold mb-1">
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
                 </div>
-                <CoinIcon symbol={token.symbol} size="sm" />
+                <CoinIcon symbol={token.symbol} size={28} />
                 <p className="text-xs font-bold text-foreground mt-1">{token.symbol}</p>
                 <p className="text-xs font-bold text-green-400">+{token.change24h.toFixed(1)}%</p>
               </motion.div>
@@ -165,7 +165,7 @@ const MemeRush = () => {
                   <span className="absolute -top-1 -left-1 text-[10px] font-bold text-muted-foreground bg-secondary rounded-full w-5 h-5 flex items-center justify-center">
                     {tab === "gainers" ? i + 1 : token.rank}
                   </span>
-                  <CoinIcon symbol={token.symbol} size="md" />
+                  <CoinIcon symbol={token.symbol} size={36} />
                 </div>
 
                 <div className="flex-1 min-w-0">
