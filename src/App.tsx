@@ -28,6 +28,7 @@ import Prediction from "./pages/Prediction";
 import Approvals from "./pages/Approvals";
 import Following from "./pages/Following";
 import HardwareWallet from "./pages/HardwareWallet";
+import MemeRush from "./pages/MemeRush";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
             <Route path="/following" element={<ProtectedRoute><Following /></ProtectedRoute>} />
             <Route path="/hardware-wallet" element={<ProtectedRoute><HardwareWallet /></ProtectedRoute>} />
+            <Route path="/meme-rush" element={<ProtectedRoute><MemeRush /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </SessionLockGuard>
