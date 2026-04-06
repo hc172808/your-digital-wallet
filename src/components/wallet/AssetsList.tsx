@@ -20,6 +20,7 @@ const AssetsList = () => {
   const [prices, setPrices] = useState<Record<string, PriceData>>({});
   const customTokens = getCustomTokens();
   const walletAddress = getWalletAddress();
+  const isSolana = walletAddress ? isSolanaAddress(walletAddress) : false;
 
   // Fetch live prices from CoinGecko
   useEffect(() => {
@@ -33,8 +34,6 @@ const AssetsList = () => {
     }, 60000);
     return () => clearInterval(interval);
   }, [customTokens.length, isSolana, Object.keys(tokenBalances).length]);
-
-  const isSolana = walletAddress ? isSolanaAddress(walletAddress) : false;
 
   // Fetch balances
   useEffect(() => {
