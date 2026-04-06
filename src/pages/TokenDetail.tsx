@@ -13,6 +13,7 @@ import { getWalletAddress } from "@/lib/wallet-core";
 import { isTokenHidden, hideToken, unhideToken } from "@/lib/hidden-tokens";
 import TokenChat from "@/components/wallet/TokenChat";
 import CoinIcon from "@/components/wallet/CoinIcon";
+import { CATEGORIZED_TOKENS } from "@/lib/token-categories";
 
 interface TokenInfo {
   symbol: string;
@@ -87,6 +88,15 @@ const TokenDetail = () => {
         contractAddress: custom.contractAddress, decimals: custom.decimals,
         description: `${custom.name} (${custom.symbol}) is a custom imported ERC-20 token on the GYDS Network.`,
       };
+    } else {
+      const cataloged = CATEGORIZED_TOKENS.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase());
+      if (cataloged) {
+        token = {
+          symbol: cataloged.symbol, name: cataloged.name, color: cataloged.color,
+          decimals: 18,
+          description: `${cataloged.name} (${cataloged.symbol}) — Market Cap: ${cataloged.marketCap || "N/A"}, 24h Volume: ${cataloged.volume24h || "N/A"}.`,
+        };
+      }
     }
   }
 
