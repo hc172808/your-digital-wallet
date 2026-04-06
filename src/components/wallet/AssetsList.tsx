@@ -64,18 +64,55 @@ const AssetsList = () => {
     return () => clearInterval(interval);
   }, [walletAddress, refreshKey, customTokens.length, isSolana]);
 
+  const nativeAsset = isSolana
+    ? {
+        symbol: "SOL",
+        name: "Solana",
+        price: prices["SOL"] ? formatPrice(prices["SOL"].usd) : "—",
+        change: prices["SOL"] ? formatChange(prices["SOL"].usd_24h_change).text : "—",
+        up: prices["SOL"] ? formatChange(prices["SOL"].usd_24h_change).up : true,
+        amount: nativeBalance,
+        value: prices["SOL"] && parseFloat(nativeBalance) > 0
+          ? `$${(parseFloat(nativeBalance) * prices["SOL"].usd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : `${nativeBalance} SOL`,
+        color: "from-purple-500 to-fuchsia-500",
+      }
+    : {
+        symbol: "GYDS",
+        name: "GYDS Network",
+        price: "—",
+        change: "—",
+        up: true,
+        amount: nativeBalance,
+        value: `${nativeBalance} GYDS`,
+        color: "from-cyan-400 to-teal-500",
+      };
+
+  // Build SPL token assets for Solana wallets
+  const solanaTokenAssets = isSolana
+    ? Object.entries(tokenBalances).map(([sym, bal]) => {
+        const priceData = prices[sym.toUpperCase()];
+        const balNum = parseFloat(bal) || 0;
+        const usdValue = priceData ? balNum * priceData.usd : 0;
+        const changeInfo = priceData ? formatChange(priceData.usd_24h_change) : { text: "—", up: true };
+        return {
+          symbol: sym,
+          name: sym,
+          price: priceData ? formatPrice(priceData.usd) : "—",
+          change: changeInfo.text,
+          up: changeInfo.up,
+          amount: bal,
+          value: usdValue > 0
+            ? `$${usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : `${bal} ${sym}`,
+          color: "from-gray-400 to-slate-500",
+        };
+      })
+    : [];
+
   const allAssets = [
-    {
-      symbol: "GYDS",
-      name: "GYDS Network",
-      price: "—",
-      change: "—",
-      up: true,
-      amount: nativeBalance,
-      value: `${nativeBalance} GYDS`,
-      color: "from-cyan-400 to-teal-500",
-    },
-    {
+    nativeAsset,
+    ...(isSolana ? [] : [{
       symbol: "GYD",
       name: "GYD Stablecoin",
       price: "—",
@@ -84,7 +121,8 @@ const AssetsList = () => {
       amount: "0",
       value: "0 GYD",
       color: "from-sky-400 to-cyan-500",
-    },
+    }]),
+    ...solanaTokenAssets,
     ...customTokens.map((t: CustomToken) => {
       const priceData = prices[t.symbol.toUpperCase()];
       const balance = tokenBalances[t.symbol] || "0";
