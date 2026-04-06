@@ -31,6 +31,8 @@ const AssetsList = () => {
     return () => clearInterval(interval);
   }, [customTokens.length]);
 
+  const isSolana = walletAddress ? isSolanaAddress(walletAddress) : false;
+
   // Fetch balances
   useEffect(() => {
     if (!walletAddress) return;
@@ -38,11 +40,17 @@ const AssetsList = () => {
     const fetchBalances = async () => {
       setLoadingBalances(true);
       try {
-        const native = await fetchNativeBalance(walletAddress);
-        setNativeBalance(native);
-        if (customTokens.length > 0) {
-          const balances = await fetchAllTokenBalances(customTokens, walletAddress);
-          setTokenBalances(balances);
+        if (isSolana) {
+          const { sol, tokens } = await fetchAllSolanaBalances(walletAddress);
+          setNativeBalance(sol);
+          setTokenBalances(tokens);
+        } else {
+          const native = await fetchNativeBalance(walletAddress);
+          setNativeBalance(native);
+          if (customTokens.length > 0) {
+            const balances = await fetchAllTokenBalances(customTokens, walletAddress);
+            setTokenBalances(balances);
+          }
         }
       } catch {
         // silent
@@ -54,7 +62,7 @@ const AssetsList = () => {
     fetchBalances();
     const interval = setInterval(fetchBalances, 30000);
     return () => clearInterval(interval);
-  }, [walletAddress, refreshKey, customTokens.length]);
+  }, [walletAddress, refreshKey, customTokens.length, isSolana]);
 
   const allAssets = [
     {
