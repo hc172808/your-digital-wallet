@@ -9,6 +9,7 @@ import CoinIcon from "@/components/wallet/CoinIcon";
 import { fetchNativeBalance, fetchAllTokenBalances } from "@/lib/balance-fetcher";
 import { fetchPrices, formatPrice, formatChange, type PriceData } from "@/lib/price-fetcher";
 import { getWalletAddress } from "@/lib/wallet-core";
+import { isSolanaAddress, fetchAllSolanaBalances } from "@/lib/solana-balance";
 
 const AssetsList = () => {
   const navigate = useNavigate();
