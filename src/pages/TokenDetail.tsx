@@ -25,8 +25,63 @@ interface TokenInfo {
 }
 
 const KNOWN_TOKENS: Record<string, TokenInfo> = {
+  // Native
   GYDS: { symbol: "GYDS", name: "GYDS Network", color: "from-cyan-400 to-teal-500", decimals: 18, description: "GYDS is the native token of the GYDS Network (Chain ID: 13370). It powers transactions, gas fees, and governance on the network." },
   GYD: { symbol: "GYD", name: "GYD Stablecoin", color: "from-sky-400 to-cyan-500", decimals: 18, description: "GYD is a stablecoin on the GYDS Network pegged to 1 USD. Used for payments, transfers, and DeFi applications." },
+  // Major L1s
+  BTC: { symbol: "BTC", name: "Bitcoin", color: "from-amber-500 to-orange-500", decimals: 8, description: "Bitcoin is the first decentralized cryptocurrency. It is a peer-to-peer digital currency without a central authority.", contractAddress: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599" },
+  ETH: { symbol: "ETH", name: "Ethereum", color: "from-blue-400 to-indigo-500", decimals: 18, description: "Ethereum is a decentralized platform for smart contracts and dApps, powered by Ether (ETH)." },
+  SOL: { symbol: "SOL", name: "Solana", color: "from-purple-500 to-fuchsia-500", decimals: 9, description: "Solana is a high-performance blockchain supporting fast, low-cost transactions and smart contracts." },
+  BNB: { symbol: "BNB", name: "BNB", color: "from-yellow-400 to-amber-500", decimals: 18, description: "BNB is the native token of the BNB Chain ecosystem, used for gas, staking, and governance." },
+  XRP: { symbol: "XRP", name: "XRP", color: "from-gray-400 to-slate-500", decimals: 6, description: "XRP is a digital asset designed for fast, low-cost cross-border payments on the XRP Ledger." },
+  ADA: { symbol: "ADA", name: "Cardano", color: "from-blue-500 to-sky-600", decimals: 6, description: "Cardano is a proof-of-stake blockchain platform for building decentralized applications." },
+  AVAX: { symbol: "AVAX", name: "Avalanche", color: "from-red-500 to-rose-600", decimals: 18, description: "Avalanche is a fast, low-cost smart contract platform with sub-second finality." },
+  DOT: { symbol: "DOT", name: "Polkadot", color: "from-pink-500 to-fuchsia-600", decimals: 10, description: "Polkadot enables cross-chain transfers and interoperability between blockchains." },
+  MATIC: { symbol: "MATIC", name: "Polygon", color: "from-violet-500 to-purple-500", decimals: 18, description: "Polygon is a layer-2 scaling solution for Ethereum providing faster and cheaper transactions.", contractAddress: "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0" },
+  // Stablecoins
+  USDT: { symbol: "USDT", name: "Tether", color: "from-emerald-400 to-green-500", decimals: 6, description: "Tether (USDT) is a fiat-collateralized stablecoin pegged to the US dollar.", contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
+  USDC: { symbol: "USDC", name: "USD Coin", color: "from-blue-500 to-cyan-400", decimals: 6, description: "USD Coin (USDC) is a fully backed US dollar stablecoin issued by Circle.", contractAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+  DAI: { symbol: "DAI", name: "Dai Stablecoin", color: "from-amber-400 to-yellow-500", decimals: 18, description: "Dai is a decentralized, crypto-collateralized stablecoin soft-pegged to the US dollar.", contractAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F" },
+  // DeFi
+  LINK: { symbol: "LINK", name: "Chainlink", color: "from-blue-600 to-indigo-400", decimals: 18, description: "Chainlink provides decentralized oracle networks that connect smart contracts to real-world data.", contractAddress: "0x514910771AF9Ca656af840dff83E8264EcF986CA" },
+  UNI: { symbol: "UNI", name: "Uniswap", color: "from-pink-500 to-rose-400", decimals: 18, description: "Uniswap is the largest decentralized exchange protocol on Ethereum for swapping ERC-20 tokens.", contractAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984" },
+  AAVE: { symbol: "AAVE", name: "Aave", color: "from-purple-400 to-indigo-500", decimals: 18, description: "Aave is a decentralized lending and borrowing protocol on Ethereum.", contractAddress: "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9" },
+  CRV: { symbol: "CRV", name: "Curve DAO", color: "from-yellow-500 to-red-500", decimals: 18, description: "Curve is a decentralized exchange optimized for efficient stablecoin trading.", contractAddress: "0xD533a949740bb3306d119CC777fa900bA034cd52" },
+  LDO: { symbol: "LDO", name: "Lido DAO", color: "from-sky-400 to-blue-500", decimals: 18, description: "Lido provides liquid staking for Ethereum and other PoS blockchains.", contractAddress: "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32" },
+  WBTC: { symbol: "WBTC", name: "Wrapped Bitcoin", color: "from-orange-400 to-amber-600", decimals: 8, description: "Wrapped Bitcoin (WBTC) is an ERC-20 token backed 1:1 by Bitcoin.", contractAddress: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599" },
+  // Meme
+  DOGE: { symbol: "DOGE", name: "Dogecoin", color: "from-yellow-400 to-amber-500", decimals: 8, description: "Dogecoin is a cryptocurrency featuring the Shiba Inu dog meme. Originally a joke, it has become a widely used digital currency." },
+  SHIB: { symbol: "SHIB", name: "Shiba Inu", color: "from-orange-500 to-red-400", decimals: 18, description: "Shiba Inu is an Ethereum-based meme token and decentralized community ecosystem.", contractAddress: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE" },
+  PEPE: { symbol: "PEPE", name: "Pepe", color: "from-green-500 to-lime-400", decimals: 18, description: "PEPE is a meme coin inspired by the Pepe the Frog internet meme.", contractAddress: "0x6982508145454Ce325dDbE47a25d4ec3d2311933" },
+  FLOKI: { symbol: "FLOKI", name: "Floki", color: "from-amber-400 to-yellow-500", decimals: 9, description: "FLOKI is a meme cryptocurrency inspired by Elon Musk's Shiba Inu dog." },
+  BONK: { symbol: "BONK", name: "Bonk", color: "from-orange-400 to-yellow-400", decimals: 5, description: "BONK is the first Solana dog coin, a community-driven meme token." },
+  WIF: { symbol: "WIF", name: "Dogwifhat", color: "from-pink-400 to-rose-500", decimals: 6, description: "Dogwifhat (WIF) is a Solana-based meme coin featuring a Shiba Inu wearing a hat." },
+  // AI
+  FET: { symbol: "FET", name: "Fetch.ai", color: "from-indigo-400 to-blue-600", decimals: 18, description: "Fetch.ai combines AI and blockchain to create autonomous economic agents.", contractAddress: "0xaea46A60368A7bD060eec7DF8CBa43b7EF41Ad85" },
+  RNDR: { symbol: "RNDR", name: "Render", color: "from-red-500 to-orange-500", decimals: 18, description: "Render Network provides distributed GPU rendering for AI and 3D content.", contractAddress: "0x6De037ef9aD2725EB40118Bb1702EBb27e4Aeb24" },
+  TAO: { symbol: "TAO", name: "Bittensor", color: "from-slate-400 to-zinc-600", decimals: 9, description: "Bittensor is a decentralized machine learning network rewarding AI model contributions." },
+  NEAR: { symbol: "NEAR", name: "NEAR Protocol", color: "from-emerald-400 to-teal-600", decimals: 24, description: "NEAR Protocol is a sharded, developer-friendly blockchain with AI integrations." },
+  // Perps
+  GMX: { symbol: "GMX", name: "GMX", color: "from-blue-500 to-indigo-600", decimals: 18, description: "GMX is a decentralized perpetual exchange on Arbitrum and Avalanche.", contractAddress: "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a" },
+  DYDX: { symbol: "DYDX", name: "dYdX", color: "from-purple-400 to-indigo-500", decimals: 18, description: "dYdX is a decentralized exchange for perpetual trading with advanced order types.", contractAddress: "0x92D6C1e31e14520e676a687F0a93788B716BEff5" },
+  ARB: { symbol: "ARB", name: "Arbitrum", color: "from-blue-400 to-sky-500", decimals: 18, description: "Arbitrum is an Ethereum Layer-2 scaling solution using optimistic rollups.", contractAddress: "0xB50721BCf8d664c30412Cfbc6cf7a15145234ad1" },
+  // Prediction / DeFi
+  GNO: { symbol: "GNO", name: "Gnosis", color: "from-teal-400 to-emerald-500", decimals: 18, description: "Gnosis builds decentralized prediction markets and infrastructure for the Ethereum ecosystem.", contractAddress: "0x6810e776880C02933D47DB1b9fc05908e5386b96" },
+  EIGEN: { symbol: "EIGEN", name: "EigenLayer", color: "from-indigo-400 to-violet-500", decimals: 18, description: "EigenLayer enables restaking of ETH to secure additional protocols and earn extra yield." },
+  STRK: { symbol: "STRK", name: "Starknet", color: "from-blue-500 to-purple-500", decimals: 18, description: "Starknet is a permissionless Layer-2 network using STARK proofs for Ethereum scaling." },
+  ZRO: { symbol: "ZRO", name: "LayerZero", color: "from-cyan-400 to-blue-500", decimals: 18, description: "LayerZero is an omnichain interoperability protocol connecting blockchains." },
+  // Commodities
+  PAXG: { symbol: "PAXG", name: "PAX Gold", color: "from-yellow-500 to-amber-600", decimals: 18, description: "PAX Gold (PAXG) is a gold-backed cryptocurrency where each token represents one fine troy ounce of gold.", contractAddress: "0x45804880De22913dAFE09f4980848ECE6EcbAf78" },
+  XAUT: { symbol: "XAUt", name: "Tether Gold", color: "from-yellow-400 to-orange-500", decimals: 6, description: "Tether Gold (XAUt) represents ownership of physical gold stored in Swiss vaults.", contractAddress: "0x68749665FF8D2d112Fa859AA293F07A622782F38" },
+  // x404
+  PANDORA: { symbol: "PANDORA", name: "Pandora", color: "from-violet-500 to-purple-600", decimals: 18, description: "Pandora is the first ERC-404 token, a hybrid fungible/NFT standard on Ethereum.", contractAddress: "0x9E9FbDE7C7a83c43913BddC8779158F1368F0413" },
+  // Solana ecosystem
+  JUP: { symbol: "JUP", name: "Jupiter", color: "from-lime-400 to-green-500", decimals: 6, description: "Jupiter is the leading DEX aggregator on Solana, providing the best swap rates." },
+  RAY: { symbol: "RAY", name: "Raydium", color: "from-purple-400 to-blue-500", decimals: 6, description: "Raydium is an AMM and liquidity provider built on Solana." },
+  PYTH: { symbol: "PYTH", name: "Pyth Network", color: "from-violet-400 to-purple-600", decimals: 6, description: "Pyth Network delivers real-time financial market data to smart contracts." },
+  ORCA: { symbol: "ORCA", name: "Orca", color: "from-amber-300 to-yellow-500", decimals: 6, description: "Orca is a user-friendly DEX on Solana focused on simplicity and capital efficiency." },
+  OCEAN: { symbol: "OCEAN", name: "Ocean Protocol", color: "from-blue-400 to-cyan-500", decimals: 18, description: "Ocean Protocol enables data sharing and monetization through blockchain and AI.", contractAddress: "0x967da4048cD07aB37855c090aAF366e4ce1b9F48" },
+  DN404: { symbol: "DN404", name: "DN-404", color: "from-pink-500 to-violet-500", decimals: 18, description: "DN-404 is an improved implementation of the ERC-404 hybrid token/NFT standard." },
 };
 
 type TimeRange = "1H" | "1D" | "7D" | "30D" | "1Y";

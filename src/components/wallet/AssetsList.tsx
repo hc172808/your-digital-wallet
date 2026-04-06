@@ -9,6 +9,7 @@ import CoinIcon from "@/components/wallet/CoinIcon";
 import { fetchNativeBalance, fetchAllTokenBalances } from "@/lib/balance-fetcher";
 import { fetchPrices, formatPrice, formatChange, type PriceData } from "@/lib/price-fetcher";
 import { getWalletAddress } from "@/lib/wallet-core";
+import { isSolanaAddress, fetchAllSolanaBalances } from "@/lib/solana-balance";
 
 const AssetsList = () => {
   const navigate = useNavigate();
@@ -19,16 +20,20 @@ const AssetsList = () => {
   const [prices, setPrices] = useState<Record<string, PriceData>>({});
   const customTokens = getCustomTokens();
   const walletAddress = getWalletAddress();
+  const isSolana = walletAddress ? isSolanaAddress(walletAddress) : false;
 
   // Fetch live prices from CoinGecko
   useEffect(() => {
     const symbols = customTokens.map((t) => t.symbol);
-    fetchPrices([...symbols]).then(setPrices);
+    if (isSolana) symbols.push("SOL", ...Object.keys(tokenBalances));
+    fetchPrices([...new Set(symbols)]).then(setPrices);
     const interval = setInterval(() => {
-      fetchPrices([...symbols]).then(setPrices);
+      const syms = customTokens.map((t) => t.symbol);
+      if (isSolana) syms.push("SOL", ...Object.keys(tokenBalances));
+      fetchPrices([...new Set(syms)]).then(setPrices);
     }, 60000);
     return () => clearInterval(interval);
-  }, [customTokens.length]);
+  }, [customTokens.length, isSolana, Object.keys(tokenBalances).length]);
 
   // Fetch balances
   useEffect(() => {
@@ -37,11 +42,17 @@ const AssetsList = () => {
     const fetchBalances = async () => {
       setLoadingBalances(true);
       try {
-        const native = await fetchNativeBalance(walletAddress);
-        setNativeBalance(native);
-        if (customTokens.length > 0) {
-          const balances = await fetchAllTokenBalances(customTokens, walletAddress);
-          setTokenBalances(balances);
+        if (isSolana) {
+          const { sol, tokens } = await fetchAllSolanaBalances(walletAddress);
+          setNativeBalance(sol);
+          setTokenBalances(tokens);
+        } else {
+          const native = await fetchNativeBalance(walletAddress);
+          setNativeBalance(native);
+          if (customTokens.length > 0) {
+            const balances = await fetchAllTokenBalances(customTokens, walletAddress);
+            setTokenBalances(balances);
+          }
         }
       } catch {
         // silent
@@ -53,20 +64,57 @@ const AssetsList = () => {
     fetchBalances();
     const interval = setInterval(fetchBalances, 30000);
     return () => clearInterval(interval);
-  }, [walletAddress, refreshKey, customTokens.length]);
+  }, [walletAddress, refreshKey, customTokens.length, isSolana]);
+
+  const nativeAsset = isSolana
+    ? {
+        symbol: "SOL",
+        name: "Solana",
+        price: prices["SOL"] ? formatPrice(prices["SOL"].usd) : "—",
+        change: prices["SOL"] ? formatChange(prices["SOL"].usd_24h_change).text : "—",
+        up: prices["SOL"] ? formatChange(prices["SOL"].usd_24h_change).up : true,
+        amount: nativeBalance,
+        value: prices["SOL"] && parseFloat(nativeBalance) > 0
+          ? `$${(parseFloat(nativeBalance) * prices["SOL"].usd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : `${nativeBalance} SOL`,
+        color: "from-purple-500 to-fuchsia-500",
+      }
+    : {
+        symbol: "GYDS",
+        name: "GYDS Network",
+        price: "—",
+        change: "—",
+        up: true,
+        amount: nativeBalance,
+        value: `${nativeBalance} GYDS`,
+        color: "from-cyan-400 to-teal-500",
+      };
+
+  // Build SPL token assets for Solana wallets
+  const solanaTokenAssets = isSolana
+    ? Object.entries(tokenBalances).map(([sym, bal]) => {
+        const priceData = prices[sym.toUpperCase()];
+        const balNum = parseFloat(bal) || 0;
+        const usdValue = priceData ? balNum * priceData.usd : 0;
+        const changeInfo = priceData ? formatChange(priceData.usd_24h_change) : { text: "—", up: true };
+        return {
+          symbol: sym,
+          name: sym,
+          price: priceData ? formatPrice(priceData.usd) : "—",
+          change: changeInfo.text,
+          up: changeInfo.up,
+          amount: bal,
+          value: usdValue > 0
+            ? `$${usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : `${bal} ${sym}`,
+          color: "from-gray-400 to-slate-500",
+        };
+      })
+    : [];
 
   const allAssets = [
-    {
-      symbol: "GYDS",
-      name: "GYDS Network",
-      price: "—",
-      change: "—",
-      up: true,
-      amount: nativeBalance,
-      value: `${nativeBalance} GYDS`,
-      color: "from-cyan-400 to-teal-500",
-    },
-    {
+    nativeAsset,
+    ...(isSolana ? [] : [{
       symbol: "GYD",
       name: "GYD Stablecoin",
       price: "—",
@@ -75,7 +123,8 @@ const AssetsList = () => {
       amount: "0",
       value: "0 GYD",
       color: "from-sky-400 to-cyan-500",
-    },
+    }]),
+    ...solanaTokenAssets,
     ...customTokens.map((t: CustomToken) => {
       const priceData = prices[t.symbol.toUpperCase()];
       const balance = tokenBalances[t.symbol] || "0";
