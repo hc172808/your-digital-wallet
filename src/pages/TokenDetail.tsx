@@ -13,6 +13,7 @@ import { getWalletAddress } from "@/lib/wallet-core";
 import { isTokenHidden, hideToken, unhideToken } from "@/lib/hidden-tokens";
 import TokenChat from "@/components/wallet/TokenChat";
 import CoinIcon from "@/components/wallet/CoinIcon";
+import { CATEGORIZED_TOKENS } from "@/lib/token-categories";
 
 interface TokenInfo {
   symbol: string;
