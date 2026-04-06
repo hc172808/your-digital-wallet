@@ -24,12 +24,15 @@ const AssetsList = () => {
   // Fetch live prices from CoinGecko
   useEffect(() => {
     const symbols = customTokens.map((t) => t.symbol);
-    fetchPrices([...symbols]).then(setPrices);
+    if (isSolana) symbols.push("SOL", ...Object.keys(tokenBalances));
+    fetchPrices([...new Set(symbols)]).then(setPrices);
     const interval = setInterval(() => {
-      fetchPrices([...symbols]).then(setPrices);
+      const syms = customTokens.map((t) => t.symbol);
+      if (isSolana) syms.push("SOL", ...Object.keys(tokenBalances));
+      fetchPrices([...new Set(syms)]).then(setPrices);
     }, 60000);
     return () => clearInterval(interval);
-  }, [customTokens.length]);
+  }, [customTokens.length, isSolana, Object.keys(tokenBalances).length]);
 
   const isSolana = walletAddress ? isSolanaAddress(walletAddress) : false;
 
