@@ -53,6 +53,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <SessionLockGuard>
+          <PriceAlertMonitor />
           <Routes>
             <Route path="/setup" element={<WalletSetup />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
