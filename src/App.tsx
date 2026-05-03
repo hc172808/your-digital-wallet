@@ -30,9 +30,16 @@ import Following from "./pages/Following";
 import HardwareWallet from "./pages/HardwareWallet";
 import MemeRush from "./pages/MemeRush";
 import AlphaToken from "./pages/AlphaToken";
+import PriceAlerts from "./pages/PriceAlerts";
 import NotFound from "./pages/NotFound";
+import { usePriceAlertMonitor } from "@/hooks/use-price-alert-monitor";
 
 const queryClient = new QueryClient();
+
+const PriceAlertMonitor = () => {
+  usePriceAlertMonitor();
+  return null;
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!hasWallet()) return <Navigate to="/setup" replace />;
@@ -46,6 +53,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <SessionLockGuard>
+          <PriceAlertMonitor />
           <Routes>
             <Route path="/setup" element={<WalletSetup />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
@@ -69,6 +77,7 @@ const App = () => (
             <Route path="/hardware-wallet" element={<ProtectedRoute><HardwareWallet /></ProtectedRoute>} />
             <Route path="/meme-rush" element={<ProtectedRoute><MemeRush /></ProtectedRoute>} />
             <Route path="/alpha" element={<ProtectedRoute><AlphaToken /></ProtectedRoute>} />
+            <Route path="/alerts" element={<ProtectedRoute><PriceAlerts /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </SessionLockGuard>

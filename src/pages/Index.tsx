@@ -48,10 +48,10 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2">
             <AccountSwitcher />
-            <button className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
+            <Link to="/alerts" className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full gradient-primary" />
-            </button>
+            </Link>
             <Link to="/settings" className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
               <Settings size={20} />
             </Link>

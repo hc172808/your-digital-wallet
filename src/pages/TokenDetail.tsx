@@ -393,6 +393,14 @@ const TokenDetail = () => {
           ))}
         </motion.div>
 
+        {/* Set price alert */}
+        <Link
+          to="/alerts"
+          className="mb-4 flex items-center justify-center gap-2 bg-card hover:bg-secondary/60 transition-colors rounded-2xl py-3 text-sm font-medium text-foreground"
+        >
+          <span aria-hidden>🔔</span> Set a price alert for {token.symbol}
+        </Link>
+
         {/* Community Chat */}
         <TokenChat symbol={token.symbol} tokenName={token.name} />
 
