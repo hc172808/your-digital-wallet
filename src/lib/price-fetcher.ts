@@ -207,3 +207,41 @@ export const formatChange = (change: number): { text: string; up: boolean } => {
 export const getCoinGeckoId = (symbol: string): string | undefined => {
   return SYMBOL_TO_ID[symbol.toUpperCase()];
 };
+
+/**
+ * Register a CoinGecko ID for a symbol at runtime (used by custom alerts).
+ */
+export const registerSymbolId = (symbol: string, id: string) => {
+  SYMBOL_TO_ID[symbol.toUpperCase()] = id;
+};
+
+/**
+ * Validate a token symbol against CoinGecko search API.
+ * Returns the coin id if found, otherwise null.
+ */
+export const validateSymbolWithCoinGecko = async (
+  symbol: string
+): Promise<{ id: string; symbol: string; name: string } | null> => {
+  const sym = symbol.trim().toUpperCase();
+  if (!sym) return null;
+  // Already known
+  const known = SYMBOL_TO_ID[sym];
+  if (known) return { id: known, symbol: sym, name: sym };
+  try {
+    const res = await fetch(`${COINGECKO_API}/search?query=${encodeURIComponent(sym)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const coins: Array<{ id: string; symbol: string; name: string; market_cap_rank: number | null }> =
+      data?.coins || [];
+    // Prefer exact symbol match with highest market cap rank
+    const exact = coins
+      .filter((c) => c.symbol?.toUpperCase() === sym)
+      .sort((a, b) => (a.market_cap_rank ?? 9e9) - (b.market_cap_rank ?? 9e9));
+    const pick = exact[0] || coins[0];
+    if (!pick) return null;
+    SYMBOL_TO_ID[sym] = pick.id;
+    return { id: pick.id, symbol: sym, name: pick.name };
+  } catch {
+    return null;
+  }
+};
