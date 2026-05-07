@@ -269,6 +269,74 @@ const Admin = () => {
           </motion.div>
         )}
 
+        {activeTab === "chains" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Configure RPC endpoints for each supported network. New RPCs are validated against the chain ID before being saved. Disable a chain to hide it across the wallet.
+            </p>
+            {SUPPORTED_CHAINS.map((c) => {
+              const st = chainStates[c.id];
+              if (!st) return null;
+              return (
+                <div key={c.id} className="bg-card rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{c.name}</h3>
+                      <p className="text-xs text-muted-foreground">{c.symbol} · {c.type === "evm" ? `Chain ${c.chainId}` : "Solana"}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleResetChain(c.id)}
+                        className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        title="Reset to defaults"
+                      ><RotateCcw size={14} /></button>
+                      <button
+                        onClick={() => handleToggleChainDisabled(c.id, !st.disabled)}
+                        className={`px-3 h-8 rounded-lg flex items-center gap-1.5 text-xs font-semibold ${
+                          st.disabled ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
+                        }`}
+                      >
+                        <Power size={12} /> {st.disabled ? "Disabled" : "Enabled"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {st.rpcs.map((url) => (
+                    <div key={url} className="flex items-center gap-2">
+                      <div className="flex-1 bg-secondary rounded-lg px-3 py-2 text-xs text-foreground truncate font-mono">{url}</div>
+                      <button
+                        onClick={() => handleRemoveChainRpc(c.id, url)}
+                        disabled={st.rpcs.length <= 1}
+                        className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                      ><Trash2 size={14} /></button>
+                    </div>
+                  ))}
+
+                  <div className="flex gap-2">
+                    <input
+                      value={st.newRpc}
+                      onChange={(e) => setChainStates((s) => ({ ...s, [c.id]: { ...s[c.id], newRpc: e.target.value } }))}
+                      placeholder={c.type === "evm" ? "https://rpc.example.com" : "https://api.mainnet.solana"}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddChainRpc(c.id)}
+                      className="flex-1 bg-secondary rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      onClick={() => handleAddChainRpc(c.id)}
+                      disabled={!!st.validating}
+                      className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground shrink-0 disabled:opacity-50"
+                    >
+                      {st.validating ? <X size={16} className="animate-pulse" /> : <Check size={16} />}
+                    </button>
+                  </div>
+                  {st.validating && (
+                    <p className="text-xs text-muted-foreground">Validating {st.validating}…</p>
+                  )}
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+
         {activeTab === "admins" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="bg-card rounded-xl p-4 space-y-3">
