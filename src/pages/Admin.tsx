@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Shield, Server, Globe, Hash, Coins, Users, UserPlus, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -12,6 +12,15 @@ import {
 } from "@/lib/network-config";
 import { getWalletAddress } from "@/lib/wallet-core";
 import { isAdminWallet, getAdminWallets, addAdminWallet, removeAdminWallet, isEnvAdmin } from "@/lib/admin-auth";
+import {
+  SUPPORTED_CHAINS,
+  setChainRpcUrls,
+  resetChainRpcUrls,
+  setChainForceDisabled,
+  isChainForceDisabled,
+  getChainById,
+  type ChainConfig,
+} from "@/lib/chain-adapter";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -21,11 +30,22 @@ const Admin = () => {
   const [config, setConfig] = useState<NetworkConfig>(getNetworkConfig());
   const [newRpc, setNewRpc] = useState("");
   const [newAdminAddress, setNewAdminAddress] = useState("");
-  const [activeTab, setActiveTab] = useState<"network" | "admins">("network");
+  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins">("network");
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
+  const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string }>>({});
 
   useEffect(() => {
     setAdminWallets(getAdminWallets());
+    const states: typeof chainStates = {};
+    SUPPORTED_CHAINS.forEach((c) => {
+      const cfg = getChainById(c.id);
+      states[c.id] = {
+        rpcs: cfg?.rpcUrls || c.rpcUrls,
+        disabled: isChainForceDisabled(c.id),
+        newRpc: "",
+      };
+    });
+    setChainStates(states);
   }, []);
 
   // Block non-admin users
