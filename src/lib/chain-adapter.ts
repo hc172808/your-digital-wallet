@@ -99,18 +99,66 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
 
 // ── Chain Management ────────────────────────────────────
 
+const RPC_OVERRIDE_KEY = "gyds_chain_rpc_overrides";
+const CHAIN_DISABLED_KEY = "gyds_chain_force_disabled";
+
+interface ChainOverrides {
+  [chainId: string]: { rpcUrls?: string[] };
+}
+
+const getRpcOverrides = (): ChainOverrides => {
+  try { return JSON.parse(localStorage.getItem(RPC_OVERRIDE_KEY) || "{}"); }
+  catch { return {}; }
+};
+
+export const setChainRpcUrls = (chainId: string, urls: string[]): void => {
+  const ov = getRpcOverrides();
+  const cleaned = urls.map((u) => u.trim()).filter(Boolean);
+  if (cleaned.length === 0) delete ov[chainId];
+  else ov[chainId] = { ...ov[chainId], rpcUrls: cleaned };
+  localStorage.setItem(RPC_OVERRIDE_KEY, JSON.stringify(ov));
+};
+
+export const resetChainRpcUrls = (chainId: string): void => {
+  const ov = getRpcOverrides();
+  delete ov[chainId];
+  localStorage.setItem(RPC_OVERRIDE_KEY, JSON.stringify(ov));
+};
+
+const getDisabledChains = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(CHAIN_DISABLED_KEY) || "[]"); }
+  catch { return []; }
+};
+
+export const setChainForceDisabled = (chainId: string, disabled: boolean): void => {
+  const cur = new Set(getDisabledChains());
+  if (disabled) cur.add(chainId); else cur.delete(chainId);
+  localStorage.setItem(CHAIN_DISABLED_KEY, JSON.stringify([...cur]));
+};
+
+export const isChainForceDisabled = (chainId: string): boolean =>
+  getDisabledChains().includes(chainId);
+
+const applyOverrides = (c: ChainConfig): ChainConfig => {
+  const ov = getRpcOverrides()[c.id];
+  return ov?.rpcUrls?.length ? { ...c, rpcUrls: ov.rpcUrls } : c;
+};
+
 export const getEnabledChains = (): ChainConfig[] => {
+  const disabled = new Set(getDisabledChains());
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const enabledIds: string[] = JSON.parse(stored);
-      return SUPPORTED_CHAINS.map((c) => ({
+      return SUPPORTED_CHAINS.map((c) => applyOverrides({
         ...c,
-        enabled: enabledIds.includes(c.id),
+        enabled: enabledIds.includes(c.id) && !disabled.has(c.id),
       }));
     }
   } catch { /* fallback */ }
-  return SUPPORTED_CHAINS;
+  return SUPPORTED_CHAINS.map((c) => applyOverrides({
+    ...c, enabled: c.enabled && !disabled.has(c.id),
+  }));
 };
 
 export const setChainEnabled = (chainId: string, enabled: boolean): void => {
@@ -123,7 +171,8 @@ export const setChainEnabled = (chainId: string, enabled: boolean): void => {
 };
 
 export const getChainById = (id: string): ChainConfig | undefined => {
-  return SUPPORTED_CHAINS.find((c) => c.id === id);
+  const base = SUPPORTED_CHAINS.find((c) => c.id === id);
+  return base ? applyOverrides(base) : undefined;
 };
 
 export const getActiveChains = (): ChainConfig[] => {
