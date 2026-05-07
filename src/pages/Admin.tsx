@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Shield, Server, Globe, Hash, Coins, Users, UserPlus, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -12,6 +12,15 @@ import {
 } from "@/lib/network-config";
 import { getWalletAddress } from "@/lib/wallet-core";
 import { isAdminWallet, getAdminWallets, addAdminWallet, removeAdminWallet, isEnvAdmin } from "@/lib/admin-auth";
+import {
+  SUPPORTED_CHAINS,
+  setChainRpcUrls,
+  resetChainRpcUrls,
+  setChainForceDisabled,
+  isChainForceDisabled,
+  getChainById,
+  type ChainConfig,
+} from "@/lib/chain-adapter";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -21,11 +30,22 @@ const Admin = () => {
   const [config, setConfig] = useState<NetworkConfig>(getNetworkConfig());
   const [newRpc, setNewRpc] = useState("");
   const [newAdminAddress, setNewAdminAddress] = useState("");
-  const [activeTab, setActiveTab] = useState<"network" | "admins">("network");
+  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins">("network");
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
+  const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string }>>({});
 
   useEffect(() => {
     setAdminWallets(getAdminWallets());
+    const states: typeof chainStates = {};
+    SUPPORTED_CHAINS.forEach((c) => {
+      const cfg = getChainById(c.id);
+      states[c.id] = {
+        rpcs: cfg?.rpcUrls || c.rpcUrls,
+        disabled: isChainForceDisabled(c.id),
+        newRpc: "",
+      };
+    });
+    setChainStates(states);
   }, []);
 
   // Block non-admin users
@@ -88,6 +108,75 @@ const Admin = () => {
     toast({ title: "Admin removed" });
   };
 
+  // ── Per-chain RPC helpers ─────────────────────────────
+  const validateChainRpc = async (chainId: string, url: string): Promise<boolean> => {
+    const chain = SUPPORTED_CHAINS.find((c) => c.id === chainId);
+    if (!chain) return false;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      if (chain.type === "evm") {
+        const res = await fetch(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", method: "eth_chainId", params: [], id: 1 }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (!data?.result) return false;
+        const cid = parseInt(data.result, 16);
+        return chain.chainId ? cid === chain.chainId : true;
+      } else {
+        const res = await fetch(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", method: "getHealth", params: [], id: 1 }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        return res.ok;
+      }
+    } catch { return false; }
+  };
+
+  const handleAddChainRpc = async (chainId: string) => {
+    const st = chainStates[chainId];
+    const url = st.newRpc.trim();
+    if (!url || !validateRpcUrl(url)) { toast({ title: "Invalid URL", variant: "destructive" }); return; }
+    if (st.rpcs.includes(url)) { toast({ title: "Already added", variant: "destructive" }); return; }
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], validating: url } }));
+    const ok = await validateChainRpc(chainId, url);
+    if (!ok) {
+      setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], validating: undefined } }));
+      toast({ title: "RPC validation failed", description: "Wrong chain ID or unreachable", variant: "destructive" });
+      return;
+    }
+    const nextRpcs = [...st.rpcs, url];
+    setChainRpcUrls(chainId, nextRpcs);
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], rpcs: nextRpcs, newRpc: "", validating: undefined } }));
+    toast({ title: "RPC added & validated" });
+  };
+
+  const handleRemoveChainRpc = (chainId: string, url: string) => {
+    const st = chainStates[chainId];
+    const next = st.rpcs.filter((u) => u !== url);
+    setChainRpcUrls(chainId, next);
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], rpcs: next } }));
+  };
+
+  const handleResetChain = (chainId: string) => {
+    resetChainRpcUrls(chainId);
+    const c = SUPPORTED_CHAINS.find((x) => x.id === chainId)!;
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], rpcs: c.rpcUrls } }));
+    toast({ title: "Reset to defaults" });
+  };
+
+  const handleToggleChainDisabled = (chainId: string, disabled: boolean) => {
+    setChainForceDisabled(chainId, disabled);
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], disabled } }));
+    toast({ title: disabled ? "Chain disabled" : "Chain enabled" });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-12">
       <div className="max-w-lg mx-auto px-4 pt-6">
@@ -107,7 +196,8 @@ const Admin = () => {
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {[
-            { key: "network" as const, label: "Network", icon: Globe },
+            { key: "network" as const, label: "GYDS", icon: Globe },
+            { key: "chains" as const, label: "Chains", icon: Server },
             { key: "admins" as const, label: "Admins", icon: Users },
           ].map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -176,6 +266,74 @@ const Admin = () => {
               className="w-full gradient-primary text-primary-foreground font-display font-bold py-4 rounded-xl text-lg hover:opacity-90 transition-opacity glow-primary flex items-center justify-center gap-2">
               <Save size={20} /> Save Configuration
             </button>
+          </motion.div>
+        )}
+
+        {activeTab === "chains" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Configure RPC endpoints for each supported network. New RPCs are validated against the chain ID before being saved. Disable a chain to hide it across the wallet.
+            </p>
+            {SUPPORTED_CHAINS.map((c) => {
+              const st = chainStates[c.id];
+              if (!st) return null;
+              return (
+                <div key={c.id} className="bg-card rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{c.name}</h3>
+                      <p className="text-xs text-muted-foreground">{c.symbol} · {c.type === "evm" ? `Chain ${c.chainId}` : "Solana"}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleResetChain(c.id)}
+                        className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        title="Reset to defaults"
+                      ><RotateCcw size={14} /></button>
+                      <button
+                        onClick={() => handleToggleChainDisabled(c.id, !st.disabled)}
+                        className={`px-3 h-8 rounded-lg flex items-center gap-1.5 text-xs font-semibold ${
+                          st.disabled ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
+                        }`}
+                      >
+                        <Power size={12} /> {st.disabled ? "Disabled" : "Enabled"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {st.rpcs.map((url) => (
+                    <div key={url} className="flex items-center gap-2">
+                      <div className="flex-1 bg-secondary rounded-lg px-3 py-2 text-xs text-foreground truncate font-mono">{url}</div>
+                      <button
+                        onClick={() => handleRemoveChainRpc(c.id, url)}
+                        disabled={st.rpcs.length <= 1}
+                        className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                      ><Trash2 size={14} /></button>
+                    </div>
+                  ))}
+
+                  <div className="flex gap-2">
+                    <input
+                      value={st.newRpc}
+                      onChange={(e) => setChainStates((s) => ({ ...s, [c.id]: { ...s[c.id], newRpc: e.target.value } }))}
+                      placeholder={c.type === "evm" ? "https://rpc.example.com" : "https://api.mainnet.solana"}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddChainRpc(c.id)}
+                      className="flex-1 bg-secondary rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      onClick={() => handleAddChainRpc(c.id)}
+                      disabled={!!st.validating}
+                      className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground shrink-0 disabled:opacity-50"
+                    >
+                      {st.validating ? <X size={16} className="animate-pulse" /> : <Check size={16} />}
+                    </button>
+                  </div>
+                  {st.validating && (
+                    <p className="text-xs text-muted-foreground">Validating {st.validating}…</p>
+                  )}
+                </div>
+              );
+            })}
           </motion.div>
         )}
 

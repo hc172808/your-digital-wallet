@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_TOKENS = [
   { symbol: "GYDS", name: "GYDS (Native)", contractAddress: null as string | null, decimals: 18 },
-  { symbol: "GYD", name: "GYD Stablecoin", contractAddress: null as string | null, decimals: 18 },
+  { symbol: "GYD", name: "GYD Stablecoin", contractAddress: null as string | null, decimals: 6 },
 ];
 
 const Send = () => {
