@@ -24,7 +24,7 @@ export interface SwapQuote {
 
 export const SWAP_TOKENS: SwapToken[] = [
   { symbol: "GYDS", name: "GYDS (Native)", contractAddress: null, decimals: 18, color: "from-cyan-400 to-teal-500" },
-  { symbol: "GYD", name: "GYD Stablecoin", contractAddress: null, decimals: 18, color: "from-sky-400 to-cyan-500" },
+  { symbol: "GYD", name: "GYD Stablecoin", contractAddress: null, decimals: 6, color: "from-sky-400 to-cyan-500" },
   { symbol: "ETH", name: "Ethereum", contractAddress: null, decimals: 18, color: "from-blue-400 to-indigo-500" },
   { symbol: "USDT", name: "Tether", contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6, color: "from-emerald-400 to-green-500" },
   { symbol: "USDC", name: "USD Coin", contractAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6, color: "from-blue-500 to-cyan-400" },

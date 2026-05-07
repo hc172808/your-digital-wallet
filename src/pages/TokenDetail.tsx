@@ -27,7 +27,7 @@ interface TokenInfo {
 const KNOWN_TOKENS: Record<string, TokenInfo> = {
   // Native
   GYDS: { symbol: "GYDS", name: "GYDS Network", color: "from-cyan-400 to-teal-500", decimals: 18, description: "GYDS is the native token of the GYDS Network (Chain ID: 13370). It powers transactions, gas fees, and governance on the network." },
-  GYD: { symbol: "GYD", name: "GYD Stablecoin", color: "from-sky-400 to-cyan-500", decimals: 18, description: "GYD is a stablecoin on the GYDS Network pegged to 1 USD. Used for payments, transfers, and DeFi applications." },
+  GYD: { symbol: "GYD", name: "GYD Stablecoin", color: "from-sky-400 to-cyan-500", decimals: 6, description: "GYD is a stablecoin on the GYDS Network pegged to 1 USD. Uses 6 decimals (like USDC). Used for payments, transfers, and DeFi applications." },
   // Major L1s
   BTC: { symbol: "BTC", name: "Bitcoin", color: "from-amber-500 to-orange-500", decimals: 8, description: "Bitcoin is the first decentralized cryptocurrency. It is a peer-to-peer digital currency without a central authority.", contractAddress: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599" },
   ETH: { symbol: "ETH", name: "Ethereum", color: "from-blue-400 to-indigo-500", decimals: 18, description: "Ethereum is a decentralized platform for smart contracts and dApps, powered by Ether (ETH)." },
