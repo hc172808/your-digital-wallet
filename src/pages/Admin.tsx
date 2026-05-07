@@ -196,7 +196,8 @@ const Admin = () => {
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {[
-            { key: "network" as const, label: "Network", icon: Globe },
+            { key: "network" as const, label: "GYDS", icon: Globe },
+            { key: "chains" as const, label: "Chains", icon: Server },
             { key: "admins" as const, label: "Admins", icon: Users },
           ].map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
