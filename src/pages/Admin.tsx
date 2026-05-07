@@ -108,6 +108,75 @@ const Admin = () => {
     toast({ title: "Admin removed" });
   };
 
+  // ── Per-chain RPC helpers ─────────────────────────────
+  const validateChainRpc = async (chainId: string, url: string): Promise<boolean> => {
+    const chain = SUPPORTED_CHAINS.find((c) => c.id === chainId);
+    if (!chain) return false;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      if (chain.type === "evm") {
+        const res = await fetch(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", method: "eth_chainId", params: [], id: 1 }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (!data?.result) return false;
+        const cid = parseInt(data.result, 16);
+        return chain.chainId ? cid === chain.chainId : true;
+      } else {
+        const res = await fetch(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", method: "getHealth", params: [], id: 1 }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        return res.ok;
+      }
+    } catch { return false; }
+  };
+
+  const handleAddChainRpc = async (chainId: string) => {
+    const st = chainStates[chainId];
+    const url = st.newRpc.trim();
+    if (!url || !validateRpcUrl(url)) { toast({ title: "Invalid URL", variant: "destructive" }); return; }
+    if (st.rpcs.includes(url)) { toast({ title: "Already added", variant: "destructive" }); return; }
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], validating: url } }));
+    const ok = await validateChainRpc(chainId, url);
+    if (!ok) {
+      setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], validating: undefined } }));
+      toast({ title: "RPC validation failed", description: "Wrong chain ID or unreachable", variant: "destructive" });
+      return;
+    }
+    const nextRpcs = [...st.rpcs, url];
+    setChainRpcUrls(chainId, nextRpcs);
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], rpcs: nextRpcs, newRpc: "", validating: undefined } }));
+    toast({ title: "RPC added & validated" });
+  };
+
+  const handleRemoveChainRpc = (chainId: string, url: string) => {
+    const st = chainStates[chainId];
+    const next = st.rpcs.filter((u) => u !== url);
+    setChainRpcUrls(chainId, next);
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], rpcs: next } }));
+  };
+
+  const handleResetChain = (chainId: string) => {
+    resetChainRpcUrls(chainId);
+    const c = SUPPORTED_CHAINS.find((x) => x.id === chainId)!;
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], rpcs: c.rpcUrls } }));
+    toast({ title: "Reset to defaults" });
+  };
+
+  const handleToggleChainDisabled = (chainId: string, disabled: boolean) => {
+    setChainForceDisabled(chainId, disabled);
+    setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], disabled } }));
+    toast({ title: disabled ? "Chain disabled" : "Chain enabled" });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-12">
       <div className="max-w-lg mx-auto px-4 pt-6">
