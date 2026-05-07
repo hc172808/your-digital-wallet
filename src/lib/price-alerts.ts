@@ -3,7 +3,7 @@
  */
 import { fetchPrices, registerSymbolId } from "@/lib/price-fetcher";
 
-const STORAGE_KEY = "gyds_price_alerts_v2";
+const STORAGE_KEY = "gyds_price_alerts_v1";
 const LOG_KEY = "gyds_price_alerts_log_v1";
 const SETTINGS_KEY = "gyds_price_alerts_settings_v1";
 const SYMBOLS_META_KEY = "gyds_price_alerts_symbols_v1";
