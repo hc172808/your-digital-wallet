@@ -303,16 +303,24 @@ const Admin = () => {
                     </div>
                   </div>
 
-                  {st.rpcs.map((url) => (
+                  {st.rpcs.map((url) => {
+                    const urlDisabled = isRpcUrlDisabled(url);
+                    return (
                     <div key={url} className="flex items-center gap-2">
-                      <div className="flex-1 bg-secondary rounded-lg px-3 py-2 text-xs text-foreground truncate font-mono">{url}</div>
+                      <div className={`flex-1 bg-secondary rounded-lg px-3 py-2 text-xs truncate font-mono ${urlDisabled ? "line-through text-muted-foreground" : "text-foreground"}`}>{url}</div>
+                      <button
+                        onClick={() => { setRpcUrlDisabled(url, !urlDisabled); setChainStates((s) => ({ ...s })); toast({ title: urlDisabled ? "URL re-enabled" : "URL disabled" }); }}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${urlDisabled ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}
+                        title={urlDisabled ? "Re-enable" : "Disable URL (skip in failover)"}
+                      ><Power size={14} /></button>
                       <button
                         onClick={() => handleRemoveChainRpc(c.id, url)}
                         disabled={st.rpcs.length <= 1}
                         className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                       ><Trash2 size={14} /></button>
                     </div>
-                  ))}
+                    );
+                  })}
 
                   <div className="flex gap-2">
                     <input
