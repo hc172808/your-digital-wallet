@@ -14,6 +14,9 @@ if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((regs) =>
     regs.forEach((r) => r.unregister())
   );
+} else {
+  // Register the background alerts service worker (narrow scope, no nav intercept)
+  import("./lib/alerts-sw-bridge").then((m) => m.registerAlertsSW()).catch(() => {});
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

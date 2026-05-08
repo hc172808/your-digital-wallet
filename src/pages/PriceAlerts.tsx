@@ -31,10 +31,19 @@ import {
   validateSymbolWithCoinGecko,
 } from "@/lib/price-fetcher";
 import { usePriceAlertMonitor } from "@/hooks/use-price-alert-monitor";
+import NotificationPermissionCard from "@/components/wallet/NotificationPermissionCard";
+import CloudSyncCard from "@/components/wallet/CloudSyncCard";
+import { syncStateToSW, bindSWMessageBridge } from "@/lib/alerts-sw-bridge";
 
 const PriceAlerts = () => {
   // Snappier polling while on this page
   usePriceAlertMonitor(10_000);
+
+  // Refresh UI when the background SW reports a trigger
+  useEffect(() => bindSWMessageBridge(() => {
+    setAlerts(getAlerts());
+    setLog(getLog());
+  }), []);
 
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [log, setLog] = useState<AlertLogEntry[]>([]);
@@ -78,6 +87,9 @@ const PriceAlerts = () => {
     }, 8000);
     return () => clearInterval(id);
   }, []);
+
+  // Mirror current alerts/settings to the background service worker
+  useEffect(() => { syncStateToSW(); }, [alerts, settings]);
 
   // Validate custom symbol against CoinGecko
   useEffect(() => {
@@ -245,6 +257,9 @@ const PriceAlerts = () => {
             </Dialog>
           </div>
         </div>
+
+        <NotificationPermissionCard />
+        <CloudSyncCard onPulled={() => { refresh(); refreshPrices(); setSettings(getSettings()); }} />
 
         {/* Backup row */}
         <div className="grid grid-cols-2 gap-2 mb-5">

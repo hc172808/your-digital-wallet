@@ -139,9 +139,28 @@ export const setChainForceDisabled = (chainId: string, disabled: boolean): void 
 export const isChainForceDisabled = (chainId: string): boolean =>
   getDisabledChains().includes(chainId);
 
+// ── Per-URL disable list (admin can blacklist a single bad RPC URL) ──
+const RPC_URL_DISABLED_KEY = "gyds_chain_rpc_url_disabled";
+const getDisabledUrls = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(RPC_URL_DISABLED_KEY) || "[]"); }
+  catch { return []; }
+};
+export const isRpcUrlDisabled = (url: string): boolean =>
+  getDisabledUrls().includes(url);
+export const setRpcUrlDisabled = (url: string, disabled: boolean): void => {
+  const cur = new Set(getDisabledUrls());
+  if (disabled) cur.add(url); else cur.delete(url);
+  localStorage.setItem(RPC_URL_DISABLED_KEY, JSON.stringify([...cur]));
+};
+export const getDisabledRpcUrls = (): string[] => getDisabledUrls();
+
 const applyOverrides = (c: ChainConfig): ChainConfig => {
   const ov = getRpcOverrides()[c.id];
-  return ov?.rpcUrls?.length ? { ...c, rpcUrls: ov.rpcUrls } : c;
+  const base = ov?.rpcUrls?.length ? { ...c, rpcUrls: ov.rpcUrls } : c;
+  // Filter out admin-disabled URLs at runtime so failover skips them
+  const disabled = new Set(getDisabledUrls());
+  const filtered = base.rpcUrls.filter((u) => !disabled.has(u));
+  return { ...base, rpcUrls: filtered.length ? filtered : base.rpcUrls };
 };
 
 export const getEnabledChains = (): ChainConfig[] => {
