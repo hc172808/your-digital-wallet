@@ -1,62 +1,49 @@
-# GYDS Wallet — TODO / Hand-off
+# GYDS Wallet — TODO
 
-Status of features in this iteration and what's left for the next dev/AI.
+## ✅ Done
 
-## ✅ Completed in this iteration
+- Self-custodial PWA wallet (EVM + Solana balances, swap, send/receive)
+- Token Detail page with CoinGecko charts and "Set price alert" CTA
+- Price Alerts page: dynamic CoinGecko symbol validation, sensitivity slider,
+  per-alert sound/vibration, global push toggle, JSON export/import
+- Background service worker (`public/alerts-sw.js`) that polls CoinGecko via
+  `periodicsync` (where supported) and shows OS notifications when the app
+  is closed — registered with a narrow scope so it never intercepts navigation
+- Notification permission card with denied-state troubleshooting
+  (iOS install hint, Chrome/Safari/Android steps, Test button)
+- Cloud sync card (email + password) — UI ready; backend table added via
+  migration `price_alerts_sync` (RLS: each user owns their row)
+- Admin Chains tab: per-network RPC list, add+validate (eth_chainId / getHealth),
+  per-URL **Disable** toggle (skipped in failover, kept for re-enable),
+  remove, reset, and full-network kill switch
+- GYD decimals fixed to 6 across Send / Swap / TokenDetail
+- Vitest coverage:
+  - `src/lib/__tests__/price-alerts.test.ts` — trigger logic, idempotency,
+    sound/vibration/push, permission helper, export/import
+  - `src/hooks/__tests__/use-price-alert-monitor.test.tsx` — polling + toast
+- `mobile/` folder with Capacitor config, Bubblewrap manifest, and
+  PWABuilder JSON for direct upload to Android Studio / pwabuilder.com
 
-- **GYD decimals fix**: GYD stablecoin now uses `decimals: 6` everywhere
-  (`Send.tsx`, `dex-swap.ts`, `TokenDetail.tsx`).
-- **Admin wallet added**: `0x6422D12BFADdEE5142BFaD21b3006a74D09017B1`
-  added to `.env` and `.env.example` `VITE_ADMIN_WALLETS`.
-- **Admin → Chains tab**: per-network RPC editor at `/admin`. Add/remove
-  RPCs, validates `eth_chainId`/`getHealth` before saving, force-disable
-  whole chains, reset to defaults. Backed by `setChainRpcUrls` /
-  `setChainForceDisabled` in `src/lib/chain-adapter.ts`.
-- **Custom-symbol Price Alerts**: enter any symbol; validated against
-  CoinGecko `/search` (`validateSymbolWithCoinGecko`). Symbol → CoinGecko
-  id is persisted and re-hydrated on app boot.
-- **Push notifications**: `requestNotificationPermission()` + `pushNotify()`
-  fire OS-level alerts when permission is granted.
-- **Sound + vibration**: WebAudio "ping" + `navigator.vibrate`. Per-alert
-  override icons in the alert row, global toggles in Settings.
-- **Sensitivity toggle**: low (2 min) / normal (30 s) / high (5 s) drives
-  the polling interval (`getPollIntervalMs`).
-- **Faster in-page refresh**: `/alerts` polls every 8 s for prices and
-  10 s for triggers regardless of global sensitivity.
-- **Real-time triggered status**: triggered alerts now show `✓ Triggered
-  at $X · HH:MM:SS` and sort to the bottom.
-- **Export / Import alerts**: JSON download + paste/file upload, with
-  Merge or Replace modes (`exportAlerts` / `importAlerts`).
+## 🟡 Next (handoff to dev)
 
-## 🟡 Verification still needed
+- Resume Lovable Cloud, then run pending migration so `CloudSyncCard`
+  push/pull lights up end-to-end
+- Add Google OAuth provider in Cloud → Auth (CloudSyncCard already opens
+  on the right tab to add a "Continue with Google" button)
+- Wire `@capacitor/push-notifications` + an FCM-backed edge function for
+  true server-pushed alerts when the OS has killed the SW (see
+  `mobile/notes/push.md`)
+- Whale-tracking + alpha-token signal alerts (extend `price-alerts.ts`
+  with a `kind: "whale" | "price"` discriminator)
+- Per-URL latency benchmark in Admin (validate-all bulk button + green/red
+  badge with ms latency)
+- E2E test for the SW bridge (`alerts-sw-bridge.ts`) under Playwright
 
-- Toggle each chain in Admin → Chains and confirm assets list / swap /
-  network status reflect the change.
-- Test push permission flow on Android Chrome (iOS Safari ≥ 16.4 only
-  supports notifications for installed PWAs).
-- Confirm vibrate works on physical Android device.
+## ⚠️ Platform notes
 
-## 🔜 Recommended next steps
-
-1. **Backend-synced alerts** (cross-device): move `price-alerts` storage
-   behind Lovable Cloud (Supabase) so users don't need export/import.
-2. **Service-worker alerts**: register a Workbox background sync to fire
-   alerts even when the tab is closed.
-3. **Per-chain GYD decimals**: confirm any contract deployments use
-   `decimals = 6` and update the GYD contract address registry.
-4. **PWA polish**: re-test install flow + offline shell; the kill-switch
-   SW doc is already in `useful-context`.
-5. **Alert formulas**: support `% change in 24h` and `crosses MA(50)`
-   alongside fixed thresholds.
-6. **Whale alerts**: integrate `/alpha` whale wallet feed into the alert
-   monitor.
-
-## 🗂 Key files touched
-
-- `src/lib/price-alerts.ts` — settings, sound/vibrate, push, export/import
-- `src/lib/price-fetcher.ts` — `validateSymbolWithCoinGecko`, `registerSymbolId`
-- `src/hooks/use-price-alert-monitor.ts` — sensitivity-driven polling
-- `src/pages/PriceAlerts.tsx` — full UI rebuild
-- `src/lib/chain-adapter.ts` — RPC overrides + force-disable
-- `src/pages/Admin.tsx` — Chains tab
-- `.env`, `.env.example` — new admin wallet
+- iOS Safari does **not** support `periodicsync`. Background alerts there
+  fire only while the SW is recently active, so iOS users should keep the
+  app installed to the Home Screen and open it occasionally.
+- Lovable preview iframe deliberately unregisters all SWs in `main.tsx`
+  to avoid stale-cache issues — background push only works on the
+  published / deployed origin.
