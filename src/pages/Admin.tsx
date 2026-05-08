@@ -34,7 +34,7 @@ const Admin = () => {
   const [newAdminAddress, setNewAdminAddress] = useState("");
   const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins">("network");
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
-  const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string }>>({});
+  const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string; results?: Record<string, { ok: boolean; latencyMs?: number; error?: string } | "pending"> }>>({});
 
   useEffect(() => {
     setAdminWallets(getAdminWallets());
