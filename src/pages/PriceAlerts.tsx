@@ -258,6 +258,9 @@ const PriceAlerts = () => {
           </div>
         </div>
 
+        <NotificationPermissionCard />
+        <CloudSyncCard onPulled={() => { refresh(); refreshPrices(); setSettings(getSettings()); }} />
+
         {/* Backup row */}
         <div className="grid grid-cols-2 gap-2 mb-5">
           <Button variant="secondary" size="sm" onClick={handleExport}>
