@@ -19,6 +19,8 @@ import {
   setChainForceDisabled,
   isChainForceDisabled,
   getChainById,
+  isRpcUrlDisabled,
+  setRpcUrlDisabled,
   type ChainConfig,
 } from "@/lib/chain-adapter";
 
