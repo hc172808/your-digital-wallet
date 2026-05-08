@@ -88,6 +88,9 @@ const PriceAlerts = () => {
     return () => clearInterval(id);
   }, []);
 
+  // Mirror current alerts/settings to the background service worker
+  useEffect(() => { syncStateToSW(); }, [alerts, settings]);
+
   // Validate custom symbol against CoinGecko
   useEffect(() => {
     setValidatedName(null);
