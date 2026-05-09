@@ -1,6 +1,20 @@
 import { getActiveRpc } from "./network-config";
 import { getCustomTokens, saveCustomToken, type CustomToken } from "./custom-tokens";
 
+// Public RPCs keyed by chainId — used for cross-chain token discovery so
+// imported wallets reveal balances on Ethereum / Polygon / etc., not just GYDS.
+const PUBLIC_RPCS: Record<number, string[]> = {
+  1: [
+    "https://eth.llamarpc.com",
+    "https://rpc.ankr.com/eth",
+    "https://cloudflare-eth.com",
+  ],
+  137: [
+    "https://polygon-rpc.com",
+    "https://rpc.ankr.com/polygon",
+  ],
+};
+
 // Well-known ERC-20 tokens to scan for balances
 const DISCOVERY_TOKENS: Array<{
   symbol: string;
