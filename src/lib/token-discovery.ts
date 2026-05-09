@@ -1,6 +1,20 @@
 import { getActiveRpc } from "./network-config";
 import { getCustomTokens, saveCustomToken, type CustomToken } from "./custom-tokens";
 
+// Public RPCs keyed by chainId — used for cross-chain token discovery so
+// imported wallets reveal balances on Ethereum / Polygon / etc., not just GYDS.
+const PUBLIC_RPCS: Record<number, string[]> = {
+  1: [
+    "https://eth.llamarpc.com",
+    "https://rpc.ankr.com/eth",
+    "https://cloudflare-eth.com",
+  ],
+  137: [
+    "https://polygon-rpc.com",
+    "https://rpc.ankr.com/polygon",
+  ],
+};
+
 // Well-known ERC-20 tokens to scan for balances
 const DISCOVERY_TOKENS: Array<{
   symbol: string;
@@ -74,18 +88,50 @@ export interface DiscoveredToken {
   balance: string;
 }
 
+async function pickRpcForChain(chainId: number, fallback: string | null): Promise<string | null> {
+  const candidates = PUBLIC_RPCS[chainId] || [];
+  for (const url of candidates) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 2500);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_chainId", params: [], id: 1 }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (res.ok) return url;
+    } catch {
+      continue;
+    }
+  }
+  return fallback;
+}
+
 export async function discoverTokens(walletAddress: string): Promise<DiscoveredToken[]> {
-  const rpcUrl = await getActiveRpc();
-  if (!rpcUrl || !walletAddress) return [];
+  if (!walletAddress) return [];
+  const activeRpc = await getActiveRpc();
 
   const existing = new Set(getCustomTokens().map((t) => t.contractAddress.toLowerCase()));
   const candidates = DISCOVERY_TOKENS.filter(
     (t) => !existing.has(t.contractAddress.toLowerCase())
   );
 
+  // Resolve a working RPC per chain once, in parallel
+  const chainIds = Array.from(new Set(candidates.flatMap((c) => c.chainIds)));
+  const rpcByChain: Record<number, string | null> = {};
+  await Promise.all(
+    chainIds.map(async (id) => {
+      rpcByChain[id] = await pickRpcForChain(id, activeRpc);
+    })
+  );
+
   const results = await Promise.allSettled(
     candidates.map(async (token) => {
-      const balance = await getTokenBalance(rpcUrl, token.contractAddress, walletAddress, token.decimals);
+      const rpc = rpcByChain[token.chainIds[0]] || activeRpc;
+      if (!rpc) return null;
+      const balance = await getTokenBalance(rpc, token.contractAddress, walletAddress, token.decimals);
       if (balance !== "0") {
         return { ...token, balance } as DiscoveredToken;
       }

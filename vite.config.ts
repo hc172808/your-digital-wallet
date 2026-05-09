@@ -44,12 +44,35 @@ export default defineConfig(({ mode }) => {
             options: { cacheName: "html", networkTimeoutSeconds: 3 },
           },
           {
+            // Bounded runtime cache for hashed JS chunks. LRU eviction via maxEntries
+            // and automatic purge if the device hits a quota error keeps storage in check.
             urlPattern: ({ request, url }) =>
               request.destination === "script" && url.pathname.startsWith("/assets/"),
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "js-assets",
-              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              expiration: {
+                maxEntries: 24,
+                maxAgeSeconds: 60 * 60 * 24 * 14, // 14 days
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Bounded cache for CSS / fonts / images shipped under /assets
+            urlPattern: ({ request, url }) =>
+              url.pathname.startsWith("/assets/") &&
+              ["style", "image", "font"].includes(request.destination),
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "static-assets",
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
           {
