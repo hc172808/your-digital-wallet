@@ -59,6 +59,7 @@ const Index = () => {
           </div>
         </div>
 
+        <PwaStatusBanner />
         <div className="mb-8" key={`bal-${chainKey}`}><BalanceCard /></div>
 
         {/* Quick Actions */}
