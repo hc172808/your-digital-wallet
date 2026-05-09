@@ -5,7 +5,18 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  // Configurable precache size limit (bytes). Defaults: 5 MiB dev, 2 MiB prod.
+  const envLimit = process.env.VITE_PWA_MAX_FILE_SIZE
+    ? parseInt(process.env.VITE_PWA_MAX_FILE_SIZE, 10)
+    : NaN;
+  const maxFileSize = Number.isFinite(envLimit)
+    ? envLimit
+    : mode === "development"
+      ? 5 * 1024 * 1024
+      : 2 * 1024 * 1024;
+
+  return {
   server: {
     host: "::",
     port: 8080,
