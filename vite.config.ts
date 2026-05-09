@@ -5,7 +5,18 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  // Configurable precache size limit (bytes). Defaults: 5 MiB dev, 2 MiB prod.
+  const envLimit = process.env.VITE_PWA_MAX_FILE_SIZE
+    ? parseInt(process.env.VITE_PWA_MAX_FILE_SIZE, 10)
+    : NaN;
+  const maxFileSize = Number.isFinite(envLimit)
+    ? envLimit
+    : mode === "development"
+      ? 5 * 1024 * 1024
+      : 2 * 1024 * 1024;
+
+  return {
   server: {
     host: "::",
     port: 8080,
@@ -20,10 +31,27 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       devOptions: { enabled: false },
       workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+        // Precache only the lightweight shell. Large JS chunks are runtime-cached below.
+        globPatterns: ["**/*.{css,html,ico,png,svg,webp,woff2}"],
+        globIgnores: ["**/assets/index-*.js"],
+        maximumFileSizeToCacheInBytes: maxFileSize,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: { cacheName: "html", networkTimeoutSeconds: 3 },
+          },
+          {
+            urlPattern: ({ request, url }) =>
+              request.destination === "script" && url.pathname.startsWith("/assets/"),
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "js-assets",
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
@@ -77,4 +105,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+  };
+});
