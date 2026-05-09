@@ -25,6 +25,10 @@ export async function registerAlertsSW(): Promise<ServiceWorkerRegistration | nu
   if (isPreviewHost() || isInIframe()) return null;
   try {
     registration = await navigator.serviceWorker.register(SW_PATH, { scope: SW_SCOPE });
+    try { localStorage.setItem("gyds_sw_last_update", String(Date.now())); } catch { /* ignore */ }
+    registration.addEventListener("updatefound", () => {
+      try { localStorage.setItem("gyds_sw_last_update", String(Date.now())); } catch { /* ignore */ }
+    });
     syncStateToSW();
     // Try to enable periodic background sync (~15 min)
     try {
