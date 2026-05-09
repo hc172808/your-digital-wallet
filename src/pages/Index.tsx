@@ -6,6 +6,7 @@ import AssetsList from "@/components/wallet/AssetsList";
 import RecentTransactions from "@/components/wallet/RecentTransactions";
 import BottomNav from "@/components/wallet/BottomNav";
 import PwaInstallBanner from "@/components/wallet/PwaInstallBanner";
+import PwaStatusBanner from "@/components/wallet/PwaStatusBanner";
 import AccountSwitcher from "@/components/wallet/AccountSwitcher";
 import ChainSelector from "@/components/wallet/ChainSelector";
 import TokenDiscovery from "@/components/wallet/TokenDiscovery";
