@@ -86,6 +86,7 @@ export interface DiscoveredToken {
   decimals: number;
   color: string;
   balance: string;
+  chainId: number;
 }
 
 async function pickRpcForChain(chainId: number, fallback: string | null): Promise<string | null> {
@@ -129,11 +130,13 @@ export async function discoverTokens(walletAddress: string): Promise<DiscoveredT
 
   const results = await Promise.allSettled(
     candidates.map(async (token) => {
-      const rpc = rpcByChain[token.chainIds[0]] || activeRpc;
+      const chainId = token.chainIds[0];
+      const rpc = rpcByChain[chainId] || activeRpc;
       if (!rpc) return null;
       const balance = await getTokenBalance(rpc, token.contractAddress, walletAddress, token.decimals);
       if (balance !== "0") {
-        return { ...token, balance } as DiscoveredToken;
+        const { chainIds: _omit, ...rest } = token;
+        return { ...rest, balance, chainId } as DiscoveredToken;
       }
       return null;
     })
@@ -145,13 +148,14 @@ export async function discoverTokens(walletAddress: string): Promise<DiscoveredT
     .filter((v): v is DiscoveredToken => v !== null);
 }
 
-export function importDiscoveredToken(token: DiscoveredToken): void {
+export function importDiscoveredToken(token: DiscoveredToken, chainId?: number): void {
   const custom: CustomToken = {
     symbol: token.symbol,
     name: token.name,
     contractAddress: token.contractAddress,
     decimals: token.decimals,
     color: token.color,
+    chainId,
   };
   saveCustomToken(custom);
 }

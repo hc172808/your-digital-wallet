@@ -1,5 +1,40 @@
 import { getActiveRpc } from "@/lib/network-config";
 
+// Public RPC fallbacks for cross-chain balance reads (imported wallets).
+const PUBLIC_RPCS: Record<number, string[]> = {
+  1: ["https://eth.llamarpc.com", "https://rpc.ankr.com/eth", "https://cloudflare-eth.com"],
+  137: ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"],
+};
+
+const rpcCache = new Map<number, string>();
+
+async function resolveRpcForChain(chainId?: number): Promise<string | null> {
+  if (!chainId) return await getActiveRpc();
+  if (rpcCache.has(chainId)) return rpcCache.get(chainId)!;
+  const candidates = PUBLIC_RPCS[chainId];
+  if (!candidates) return await getActiveRpc();
+  for (const url of candidates) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 2500);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_chainId", params: [], id: 1 }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (res.ok) {
+        rpcCache.set(chainId, url);
+        return url;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return await getActiveRpc();
+}
+
 /**
  * Fetch native (GYDS) balance for an address
  */
@@ -35,13 +70,13 @@ export const fetchNativeBalance = async (address: string): Promise<string> => {
 export const fetchTokenBalance = async (
   tokenAddress: string,
   walletAddress: string,
-  decimals: number = 18
+  decimals: number = 18,
+  chainId?: number
 ): Promise<string> => {
-  const rpc = await getActiveRpc();
+  const rpc = await resolveRpcForChain(chainId);
   if (!rpc) return "0";
 
   try {
-    // Encode balanceOf(address) call
     const paddedAddress = walletAddress.toLowerCase().replace("0x", "").padStart(64, "0");
     const data = `0x70a08231${paddedAddress}`;
 
@@ -66,16 +101,21 @@ export const fetchTokenBalance = async (
 };
 
 /**
- * Fetch multiple token balances in parallel
+ * Fetch multiple token balances in parallel (per-token chainId aware).
  */
 export const fetchAllTokenBalances = async (
-  tokens: Array<{ contractAddress: string; decimals: number; symbol: string }>,
+  tokens: Array<{ contractAddress: string; decimals: number; symbol: string; chainId?: number }>,
   walletAddress: string
 ): Promise<Record<string, string>> => {
   const results: Record<string, string> = {};
 
   const promises = tokens.map(async (token) => {
-    const balance = await fetchTokenBalance(token.contractAddress, walletAddress, token.decimals);
+    const balance = await fetchTokenBalance(
+      token.contractAddress,
+      walletAddress,
+      token.decimals,
+      token.chainId
+    );
     results[token.symbol] = balance;
   });
 

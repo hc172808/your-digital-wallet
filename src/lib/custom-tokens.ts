@@ -4,6 +4,8 @@ export interface CustomToken {
   name: string;
   decimals: number;
   color: string;
+  /** Chain ID where this token lives (1 = Ethereum, 137 = Polygon, 13370 = GYDS). Defaults to active chain when missing. */
+  chainId?: number;
 }
 
 const STORAGE_KEY = "gyds_custom_tokens";
