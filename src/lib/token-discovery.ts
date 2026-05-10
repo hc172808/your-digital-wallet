@@ -130,11 +130,13 @@ export async function discoverTokens(walletAddress: string): Promise<DiscoveredT
 
   const results = await Promise.allSettled(
     candidates.map(async (token) => {
-      const rpc = rpcByChain[token.chainIds[0]] || activeRpc;
+      const chainId = token.chainIds[0];
+      const rpc = rpcByChain[chainId] || activeRpc;
       if (!rpc) return null;
       const balance = await getTokenBalance(rpc, token.contractAddress, walletAddress, token.decimals);
       if (balance !== "0") {
-        return { ...token, balance } as DiscoveredToken;
+        const { chainIds: _omit, ...rest } = token;
+        return { ...rest, balance, chainId } as DiscoveredToken;
       }
       return null;
     })
