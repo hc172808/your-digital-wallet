@@ -200,20 +200,29 @@ const Admin = () => {
         </p>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto">
           {[
             { key: "network" as const, label: "GYDS", icon: Globe },
             { key: "chains" as const, label: "Chains", icon: Server },
             { key: "admins" as const, label: "Admins", icon: Users },
+            { key: "debug" as const, label: "Debug", icon: Bug },
           ].map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all shrink-0 ${
                 activeTab === tab.key ? "gradient-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
               }`}>
               <tab.icon size={16} /> {tab.label}
             </button>
           ))}
         </div>
+
+        {superAdmin && (
+          <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-foreground">
+            <Crown size={14} className="text-primary" />
+            <span className="font-semibold">Super Admin</span>
+            <span className="text-muted-foreground">— full control over the admin list</span>
+          </div>
+        )}
 
         {activeTab === "network" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
