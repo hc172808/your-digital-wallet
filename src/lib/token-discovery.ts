@@ -145,13 +145,14 @@ export async function discoverTokens(walletAddress: string): Promise<DiscoveredT
     .filter((v): v is DiscoveredToken => v !== null);
 }
 
-export function importDiscoveredToken(token: DiscoveredToken): void {
+export function importDiscoveredToken(token: DiscoveredToken, chainId?: number): void {
   const custom: CustomToken = {
     symbol: token.symbol,
     name: token.name,
     contractAddress: token.contractAddress,
     decimals: token.decimals,
     color: token.color,
+    chainId,
   };
   saveCustomToken(custom);
 }
