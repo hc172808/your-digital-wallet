@@ -40,7 +40,7 @@ const TokenDiscovery = ({ onTokensChanged }: TokenDiscoveryProps) => {
   };
 
   const handleImport = (token: DiscoveredToken) => {
-    importDiscoveredToken(token);
+    importDiscoveredToken(token, token.chainId);
     setImported((prev) => new Set([...prev, token.contractAddress]));
     onTokensChanged?.();
   };
