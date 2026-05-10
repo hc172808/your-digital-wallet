@@ -1,4 +1,5 @@
 import { getActiveRpc } from "@/lib/network-config";
+import { logRpcCall } from "@/lib/rpc-debug-log";
 
 // Public RPC fallbacks for cross-chain balance reads (imported wallets).
 const PUBLIC_RPCS: Record<number, string[]> = {
@@ -7,6 +8,14 @@ const PUBLIC_RPCS: Record<number, string[]> = {
 };
 
 const rpcCache = new Map<number, string>();
+
+/** Exposed for tests: allow injecting a deterministic RPC per chain. */
+export function __setRpcForChain(chainId: number, url: string) {
+  rpcCache.set(chainId, url);
+}
+export function __clearRpcCache() {
+  rpcCache.clear();
+}
 
 async function resolveRpcForChain(chainId?: number): Promise<string | null> {
   if (!chainId) return await getActiveRpc();
@@ -54,11 +63,12 @@ export const fetchNativeBalance = async (address: string): Promise<string> => {
       }),
     });
     const data = await res.json();
+    logRpcCall({ kind: "native", rpcUrl: rpc, ok: !!data?.result });
     if (data.result) {
       return formatBalance(data.result, 18);
     }
-  } catch {
-    // silent fail
+  } catch (e: any) {
+    logRpcCall({ kind: "native", rpcUrl: rpc, ok: false, error: String(e?.message ?? e) });
   }
   return "0";
 };
@@ -74,7 +84,10 @@ export const fetchTokenBalance = async (
   chainId?: number
 ): Promise<string> => {
   const rpc = await resolveRpcForChain(chainId);
-  if (!rpc) return "0";
+  if (!rpc) {
+    logRpcCall({ kind: "balance", chainId, rpcUrl: "(none)", contract: tokenAddress, ok: false, error: "no rpc" });
+    return "0";
+  }
 
   try {
     const paddedAddress = walletAddress.toLowerCase().replace("0x", "").padStart(64, "0");
@@ -91,11 +104,20 @@ export const fetchTokenBalance = async (
       }),
     });
     const result = await res.json();
-    if (result.result && result.result !== "0x") {
+    const ok = !!(result?.result && result.result !== "0x");
+    logRpcCall({ kind: "balance", chainId, rpcUrl: rpc, contract: tokenAddress, ok });
+    if (ok) {
       return formatBalance(result.result, decimals);
     }
-  } catch {
-    // silent fail
+  } catch (e: any) {
+    logRpcCall({
+      kind: "balance",
+      chainId,
+      rpcUrl: rpc,
+      contract: tokenAddress,
+      ok: false,
+      error: String(e?.message ?? e),
+    });
   }
   return "0";
 };

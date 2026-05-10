@@ -1,13 +1,26 @@
 /**
  * Admin authentication via wallet address.
- * Admin wallets are defined in VITE_ADMIN_WALLETS env variable (comma-separated).
- * Only these wallets can see/access the admin panel.
+ *
+ * - Admin wallets are defined in VITE_ADMIN_WALLETS env (comma-separated)
+ *   plus runtime additions made by the SUPER ADMIN inside the panel.
+ * - The SUPER ADMIN is hard-coded and is the ONLY wallet allowed to add or
+ *   remove other admins. Regular admins can still access the panel but
+ *   cannot mutate the admin list.
  */
 
 const ENV_ADMIN_WALLETS = import.meta.env.VITE_ADMIN_WALLETS || "";
 const RUNTIME_ADMINS_KEY = "gyds_runtime_admins";
 
-/** Get all admin wallet addresses (env + runtime-added by existing admins) */
+/** The single super-admin wallet (hard-coded). */
+export const SUPER_ADMIN_WALLET =
+  "0x6422D12BFADdEE5142BFaD21b3006a74D09017B1".toLowerCase();
+
+export const isSuperAdmin = (address: string | null | undefined): boolean => {
+  if (!address) return false;
+  return address.toLowerCase() === SUPER_ADMIN_WALLET;
+};
+
+/** Get all admin wallet addresses (env + runtime + hard-coded super admin) */
 export const getAdminWallets = (): string[] => {
   const envWallets = ENV_ADMIN_WALLETS
     .split(",")
@@ -15,7 +28,7 @@ export const getAdminWallets = (): string[] => {
     .filter((w: string) => w.startsWith("0x") && w.length === 42);
 
   const runtimeWallets = getRuntimeAdmins();
-  const all = new Set([...envWallets, ...runtimeWallets]);
+  const all = new Set([SUPER_ADMIN_WALLET, ...envWallets, ...runtimeWallets]);
   return Array.from(all);
 };
 
@@ -26,7 +39,7 @@ export const isAdminWallet = (address: string | null): boolean => {
   return admins.includes(address.toLowerCase());
 };
 
-/** Get runtime-added admin wallets (added by existing admins via the panel) */
+/** Get runtime-added admin wallets (added by super admin via the panel) */
 const getRuntimeAdmins = (): string[] => {
   try {
     const stored = localStorage.getItem(RUNTIME_ADMINS_KEY);
@@ -39,33 +52,49 @@ const getRuntimeAdmins = (): string[] => {
   }
 };
 
-/** Add a new admin wallet (only callable from admin panel) */
-export const addAdminWallet = (address: string): boolean => {
+/**
+ * Add a new admin wallet. Only the SUPER ADMIN may call this.
+ * Returns:
+ *   - "ok"           : added
+ *   - "exists"       : already an admin
+ *   - "invalid"      : malformed address
+ *   - "forbidden"    : caller is not the super admin
+ */
+export const addAdminWallet = (
+  address: string,
+  caller: string | null,
+): "ok" | "exists" | "invalid" | "forbidden" => {
+  if (!isSuperAdmin(caller)) return "forbidden";
   const normalized = address.trim().toLowerCase();
-  if (!normalized.startsWith("0x") || normalized.length !== 42) return false;
+  if (!normalized.startsWith("0x") || normalized.length !== 42) return "invalid";
+
+  const all = getAdminWallets();
+  if (all.includes(normalized)) return "exists";
 
   const current = getRuntimeAdmins();
-  if (current.includes(normalized)) return false;
-
   current.push(normalized);
   localStorage.setItem(RUNTIME_ADMINS_KEY, JSON.stringify(current));
-  return true;
+  return "ok";
 };
 
-/** Remove a runtime admin wallet (cannot remove env-defined admins) */
-export const removeAdminWallet = (address: string): boolean => {
+/**
+ * Remove a runtime admin wallet. Only the SUPER ADMIN may call this.
+ * The super admin and env-defined admins cannot be removed.
+ */
+export const removeAdminWallet = (
+  address: string,
+  caller: string | null,
+): "ok" | "protected" | "forbidden" | "not-found" => {
+  if (!isSuperAdmin(caller)) return "forbidden";
   const normalized = address.toLowerCase();
-  const envWallets = ENV_ADMIN_WALLETS
-    .split(",")
-    .map((w: string) => w.trim().toLowerCase())
-    .filter((w: string) => w.startsWith("0x"));
-
-  if (envWallets.includes(normalized)) return false; // Can't remove env admins
+  if (normalized === SUPER_ADMIN_WALLET) return "protected";
+  if (isEnvAdmin(normalized)) return "protected";
 
   const current = getRuntimeAdmins();
+  if (!current.includes(normalized)) return "not-found";
   const updated = current.filter((w) => w !== normalized);
   localStorage.setItem(RUNTIME_ADMINS_KEY, JSON.stringify(updated));
-  return true;
+  return "ok";
 };
 
 /** Check if an admin wallet is from env (non-removable) */

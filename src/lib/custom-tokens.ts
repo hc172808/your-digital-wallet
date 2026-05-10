@@ -30,26 +30,61 @@ export const getCustomTokens = (): CustomToken[] => {
   }
 };
 
-export const saveCustomToken = (token: CustomToken): void => {
+const sameToken = (a: CustomToken, b: CustomToken): boolean =>
+  a.contractAddress.toLowerCase() === b.contractAddress.toLowerCase() &&
+  (a.chainId ?? 0) === (b.chainId ?? 0);
+
+/**
+ * Save a token. Duplicate detection treats (contractAddress + chainId) as the
+ * unique key — re-importing the same token on the same chain is a no-op and
+ * never overwrites a fetched balance. The same contract on a different chain
+ * is a separate entry.
+ */
+export const saveCustomToken = (token: CustomToken): { added: boolean; duplicate: boolean } => {
   const tokens = getCustomTokens();
-  const existing = tokens.findIndex(
-    (t) => t.contractAddress.toLowerCase() === token.contractAddress.toLowerCase()
-  );
+  const existing = tokens.findIndex((t) => sameToken(t, token));
   if (existing >= 0) {
-    tokens[existing] = token;
-  } else {
-    tokens.push(token);
+    // Preserve existing entry; only fill in missing metadata fields.
+    const cur = tokens[existing];
+    tokens[existing] = {
+      ...cur,
+      name: cur.name || token.name,
+      decimals: cur.decimals || token.decimals,
+      color: cur.color || token.color,
+      chainId: cur.chainId ?? token.chainId,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+    return { added: false, duplicate: true };
   }
+  tokens.push(token);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+  return { added: true, duplicate: false };
 };
 
-export const removeCustomToken = (contractAddress: string): void => {
-  const tokens = getCustomTokens().filter(
-    (t) => t.contractAddress.toLowerCase() !== contractAddress.toLowerCase()
-  );
+export const removeCustomToken = (contractAddress: string, chainId?: number): void => {
+  const tokens = getCustomTokens().filter((t) => {
+    const sameAddr = t.contractAddress.toLowerCase() === contractAddress.toLowerCase();
+    if (!sameAddr) return true;
+    // If chainId provided, only remove the matching chain entry.
+    if (chainId !== undefined) return (t.chainId ?? 0) !== chainId;
+    return false;
+  });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
 };
 
 export const getRandomColor = (): string => {
   return GRADIENT_COLORS[Math.floor(Math.random() * GRADIENT_COLORS.length)];
+};
+
+/** Human-readable chain label, used by the Assets list badge. */
+export const getChainLabel = (chainId?: number): string => {
+  switch (chainId) {
+    case 1: return "Ethereum";
+    case 137: return "Polygon";
+    case 13370: return "GYDS";
+    case 56: return "BNB";
+    case 42161: return "Arbitrum";
+    case 10: return "Optimism";
+    default: return chainId ? `Chain ${chainId}` : "GYDS";
+  }
 };
