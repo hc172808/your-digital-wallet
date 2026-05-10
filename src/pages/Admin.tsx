@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock } from "lucide-react";
+import RpcDebugPanel from "@/components/wallet/RpcDebugPanel";
 import { Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -11,7 +12,7 @@ import {
   type NetworkConfig,
 } from "@/lib/network-config";
 import { getWalletAddress } from "@/lib/wallet-core";
-import { isAdminWallet, getAdminWallets, addAdminWallet, removeAdminWallet, isEnvAdmin } from "@/lib/admin-auth";
+import { isAdminWallet, getAdminWallets, addAdminWallet, removeAdminWallet, isEnvAdmin, isSuperAdmin, SUPER_ADMIN_WALLET } from "@/lib/admin-auth";
 import {
   SUPPORTED_CHAINS,
   setChainRpcUrls,
@@ -28,11 +29,12 @@ const Admin = () => {
   const { toast } = useToast();
   const walletAddress = getWalletAddress();
   const isAdmin = isAdminWallet(walletAddress);
+  const superAdmin = isSuperAdmin(walletAddress);
 
   const [config, setConfig] = useState<NetworkConfig>(getNetworkConfig());
   const [newRpc, setNewRpc] = useState("");
   const [newAdminAddress, setNewAdminAddress] = useState("");
-  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins">("network");
+  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins" | "debug">("network");
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
   const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string; results?: Record<string, { ok: boolean; latencyMs?: number; error?: string } | "pending"> }>>({});
 
@@ -86,28 +88,30 @@ const Admin = () => {
   const handleAddAdmin = () => {
     const addr = newAdminAddress.trim();
     if (!addr) return;
-    if (!addr.startsWith("0x") || addr.length !== 42) {
-      toast({ title: "Invalid wallet address", description: "Must be a valid 0x... address (42 chars)", variant: "destructive" });
-      return;
-    }
-    const success = addAdminWallet(addr);
-    if (success) {
+    const result = addAdminWallet(addr, walletAddress);
+    if (result === "ok") {
       setAdminWallets(getAdminWallets());
       setNewAdminAddress("");
       toast({ title: "Admin added", description: `${addr.slice(0, 6)}...${addr.slice(-4)}` });
+    } else if (result === "forbidden") {
+      toast({ title: "Only the super admin can add admins", variant: "destructive" });
+    } else if (result === "exists") {
+      toast({ title: "Already an admin", variant: "destructive" });
     } else {
-      toast({ title: "Already an admin or invalid address", variant: "destructive" });
+      toast({ title: "Invalid wallet address", description: "Must be a valid 0x... address (42 chars)", variant: "destructive" });
     }
   };
 
   const handleRemoveAdmin = (addr: string) => {
-    if (isEnvAdmin(addr)) {
-      toast({ title: "Cannot remove env-defined admin", description: "This admin is set in the .env file", variant: "destructive" });
-      return;
+    const result = removeAdminWallet(addr, walletAddress);
+    if (result === "ok") {
+      setAdminWallets(getAdminWallets());
+      toast({ title: "Admin removed" });
+    } else if (result === "forbidden") {
+      toast({ title: "Only the super admin can remove admins", variant: "destructive" });
+    } else if (result === "protected") {
+      toast({ title: "Protected admin", description: "Super admin and env-defined admins cannot be removed", variant: "destructive" });
     }
-    removeAdminWallet(addr);
-    setAdminWallets(getAdminWallets());
-    toast({ title: "Admin removed" });
   };
 
   // ── Per-chain RPC helpers ─────────────────────────────
