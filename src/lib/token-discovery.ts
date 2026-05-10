@@ -86,6 +86,7 @@ export interface DiscoveredToken {
   decimals: number;
   color: string;
   balance: string;
+  chainId: number;
 }
 
 async function pickRpcForChain(chainId: number, fallback: string | null): Promise<string | null> {
