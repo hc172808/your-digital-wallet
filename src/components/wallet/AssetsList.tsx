@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getCustomTokens, type CustomToken } from "@/lib/custom-tokens";
+import { getCustomTokens, getChainLabel, type CustomToken } from "@/lib/custom-tokens";
 import { getHiddenTokens } from "@/lib/hidden-tokens";
 import { TokenManager } from "@/components/wallet/ImportToken";
 import CoinIcon from "@/components/wallet/CoinIcon";
@@ -143,6 +143,7 @@ const AssetsList = () => {
           ? `$${usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : `${balance} ${t.symbol}`,
         color: t.color,
+        chainLabel: getChainLabel(t.chainId),
       };
     }),
   ];
@@ -179,7 +180,14 @@ const AssetsList = () => {
             <CoinIcon symbol={asset.symbol} size={40} fallbackColor={asset.color} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-foreground">{asset.symbol}</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="font-semibold text-foreground">{asset.symbol}</p>
+                  {("chainLabel" in asset) && (asset as any).chainLabel && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground font-medium uppercase tracking-wide shrink-0">
+                      {(asset as any).chainLabel}
+                    </span>
+                  )}
+                </div>
                 <p className="font-semibold text-foreground text-sm">{asset.value}</p>
               </div>
               <div className="flex items-center justify-between">

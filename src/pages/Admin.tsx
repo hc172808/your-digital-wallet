@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock } from "lucide-react";
+import RpcDebugPanel from "@/components/wallet/RpcDebugPanel";
 import { Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -11,7 +12,7 @@ import {
   type NetworkConfig,
 } from "@/lib/network-config";
 import { getWalletAddress } from "@/lib/wallet-core";
-import { isAdminWallet, getAdminWallets, addAdminWallet, removeAdminWallet, isEnvAdmin } from "@/lib/admin-auth";
+import { isAdminWallet, getAdminWallets, addAdminWallet, removeAdminWallet, isEnvAdmin, isSuperAdmin, SUPER_ADMIN_WALLET } from "@/lib/admin-auth";
 import {
   SUPPORTED_CHAINS,
   setChainRpcUrls,
@@ -28,11 +29,12 @@ const Admin = () => {
   const { toast } = useToast();
   const walletAddress = getWalletAddress();
   const isAdmin = isAdminWallet(walletAddress);
+  const superAdmin = isSuperAdmin(walletAddress);
 
   const [config, setConfig] = useState<NetworkConfig>(getNetworkConfig());
   const [newRpc, setNewRpc] = useState("");
   const [newAdminAddress, setNewAdminAddress] = useState("");
-  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins">("network");
+  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins" | "debug">("network");
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
   const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string; results?: Record<string, { ok: boolean; latencyMs?: number; error?: string } | "pending"> }>>({});
 
@@ -86,28 +88,30 @@ const Admin = () => {
   const handleAddAdmin = () => {
     const addr = newAdminAddress.trim();
     if (!addr) return;
-    if (!addr.startsWith("0x") || addr.length !== 42) {
-      toast({ title: "Invalid wallet address", description: "Must be a valid 0x... address (42 chars)", variant: "destructive" });
-      return;
-    }
-    const success = addAdminWallet(addr);
-    if (success) {
+    const result = addAdminWallet(addr, walletAddress);
+    if (result === "ok") {
       setAdminWallets(getAdminWallets());
       setNewAdminAddress("");
       toast({ title: "Admin added", description: `${addr.slice(0, 6)}...${addr.slice(-4)}` });
+    } else if (result === "forbidden") {
+      toast({ title: "Only the super admin can add admins", variant: "destructive" });
+    } else if (result === "exists") {
+      toast({ title: "Already an admin", variant: "destructive" });
     } else {
-      toast({ title: "Already an admin or invalid address", variant: "destructive" });
+      toast({ title: "Invalid wallet address", description: "Must be a valid 0x... address (42 chars)", variant: "destructive" });
     }
   };
 
   const handleRemoveAdmin = (addr: string) => {
-    if (isEnvAdmin(addr)) {
-      toast({ title: "Cannot remove env-defined admin", description: "This admin is set in the .env file", variant: "destructive" });
-      return;
+    const result = removeAdminWallet(addr, walletAddress);
+    if (result === "ok") {
+      setAdminWallets(getAdminWallets());
+      toast({ title: "Admin removed" });
+    } else if (result === "forbidden") {
+      toast({ title: "Only the super admin can remove admins", variant: "destructive" });
+    } else if (result === "protected") {
+      toast({ title: "Protected admin", description: "Super admin and env-defined admins cannot be removed", variant: "destructive" });
     }
-    removeAdminWallet(addr);
-    setAdminWallets(getAdminWallets());
-    toast({ title: "Admin removed" });
   };
 
   // ── Per-chain RPC helpers ─────────────────────────────
@@ -196,20 +200,29 @@ const Admin = () => {
         </p>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto">
           {[
             { key: "network" as const, label: "GYDS", icon: Globe },
             { key: "chains" as const, label: "Chains", icon: Server },
             { key: "admins" as const, label: "Admins", icon: Users },
+            { key: "debug" as const, label: "Debug", icon: Bug },
           ].map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all shrink-0 ${
                 activeTab === tab.key ? "gradient-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
               }`}>
               <tab.icon size={16} /> {tab.label}
             </button>
           ))}
         </div>
+
+        {superAdmin && (
+          <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-foreground">
+            <Crown size={14} className="text-primary" />
+            <span className="font-semibold">Super Admin</span>
+            <span className="text-muted-foreground">— full control over the admin list</span>
+          </div>
+        )}
 
         {activeTab === "network" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
@@ -354,46 +367,68 @@ const Admin = () => {
                 <Users size={16} className="text-primary" /> Admin Wallets
               </h2>
               <p className="text-xs text-muted-foreground">
-                Only these wallet addresses can access the admin panel. Env-defined admins cannot be removed.
+                Only these wallets can access the admin panel. Only the <span className="text-primary font-semibold">super admin</span> can add or remove other admins.
               </p>
 
-              {adminWallets.map((addr) => (
-                <div key={addr} className="flex items-center gap-3 bg-secondary/50 rounded-lg px-3 py-3">
-                  <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
-                    {addr.slice(2, 4).toUpperCase()}
+              {adminWallets.map((addr) => {
+                const isSuper = addr.toLowerCase() === SUPER_ADMIN_WALLET;
+                const protectedAdmin = isSuper || isEnvAdmin(addr);
+                return (
+                  <div key={addr} className="flex items-center gap-3 bg-secondary/50 rounded-lg px-3 py-3">
+                    <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
+                      {isSuper ? <Crown size={14} /> : addr.slice(2, 4).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-mono text-foreground truncate">{addr}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {isSuper ? "👑 Super admin" : isEnvAdmin(addr) ? "🔒 Env-defined" : "Runtime admin"}
+                        {addr.toLowerCase() === walletAddress?.toLowerCase() ? " (you)" : ""}
+                      </p>
+                    </div>
+                    {!protectedAdmin && superAdmin && (
+                      <button onClick={() => handleRemoveAdmin(addr)}
+                        className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                    {!protectedAdmin && !superAdmin && (
+                      <Lock size={14} className="text-muted-foreground" />
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono text-foreground truncate">{addr}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {isEnvAdmin(addr) ? "🔒 Env-defined" : "Runtime admin"}
-                      {addr.toLowerCase() === walletAddress?.toLowerCase() ? " (you)" : ""}
-                    </p>
-                  </div>
-                  {!isEnvAdmin(addr) && (
-                    <button onClick={() => handleRemoveAdmin(addr)}
-                      className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
 
-              <div className="flex gap-2 pt-2">
-                <input value={newAdminAddress} onChange={(e) => setNewAdminAddress(e.target.value)} placeholder="0x... wallet address"
-                  onKeyDown={(e) => e.key === "Enter" && handleAddAdmin()}
-                  className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary" />
-                <button onClick={handleAddAdmin} className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground shrink-0">
-                  <UserPlus size={18} />
-                </button>
-              </div>
+              {superAdmin ? (
+                <div className="flex gap-2 pt-2">
+                  <input value={newAdminAddress} onChange={(e) => setNewAdminAddress(e.target.value)} placeholder="0x... wallet address"
+                    onKeyDown={(e) => e.key === "Enter" && handleAddAdmin()}
+                    className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary" />
+                  <button onClick={handleAddAdmin} className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground shrink-0">
+                    <UserPlus size={18} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/40 border border-border mt-2">
+                  <Lock size={14} className="text-muted-foreground shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    Adding or removing admins is restricted to the super admin.
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10 mt-2">
                 <AlertTriangle size={14} className="text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  To add permanent admin wallets, set <code className="text-primary">VITE_ADMIN_WALLETS</code> in your .env file (comma-separated).
+                  Permanent admins can also be set via <code className="text-primary">VITE_ADMIN_WALLETS</code> in .env (comma-separated).
                 </p>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === "debug" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <RpcDebugPanel />
           </motion.div>
         )}
       </div>
