@@ -143,6 +143,7 @@ const AssetsList = () => {
           ? `$${usdValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : `${balance} ${t.symbol}`,
         color: t.color,
+        chainLabel: getChainLabel(t.chainId),
       };
     }),
   ];
