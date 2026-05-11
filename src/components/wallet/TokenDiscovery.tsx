@@ -18,6 +18,7 @@ const TokenDiscovery = ({ onTokensChanged }: TokenDiscoveryProps) => {
   const [autoScanned, setAutoScanned] = useState(false);
 
   useEffect(() => {
+    if (!isAutoDetectTokensEnabled()) return;
     const lastScan = getLastDiscoveryTime();
     const hourAgo = Date.now() - 3600000;
     if (lastScan < hourAgo && !autoScanned) {
