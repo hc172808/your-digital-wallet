@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock, Radar, ShieldCheck } from "lucide-react";
 import RpcDebugPanel from "@/components/wallet/RpcDebugPanel";
+import {
+  isAutoDetectTokensEnabled,
+  setAutoDetectTokensEnabled,
+  isAutoDetectCustomTokensEnabled,
+  setAutoDetectCustomTokensEnabled,
+} from "@/lib/auto-detect-settings";
 import { Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
