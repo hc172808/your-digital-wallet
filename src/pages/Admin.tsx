@@ -213,6 +213,8 @@ const Admin = () => {
             { key: "network" as const, label: "GYDS", icon: Globe },
             { key: "chains" as const, label: "Chains", icon: Server },
             { key: "admins" as const, label: "Admins", icon: Users },
+            { key: "detection" as const, label: "Detection", icon: Radar },
+            { key: "hosting" as const, label: "Hosting", icon: ShieldCheck },
             { key: "debug" as const, label: "Debug", icon: Bug },
           ].map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
