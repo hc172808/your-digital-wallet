@@ -40,7 +40,9 @@ const Admin = () => {
   const [config, setConfig] = useState<NetworkConfig>(getNetworkConfig());
   const [newRpc, setNewRpc] = useState("");
   const [newAdminAddress, setNewAdminAddress] = useState("");
-  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins" | "debug">("network");
+  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins" | "detection" | "hosting" | "debug">("network");
+  const [autoTokens, setAutoTokens] = useState(isAutoDetectTokensEnabled());
+  const [autoCustom, setAutoCustom] = useState(isAutoDetectCustomTokensEnabled());
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
   const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string; results?: Record<string, { ok: boolean; latencyMs?: number; error?: string } | "pending"> }>>({});
 
