@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock, Radar, ShieldCheck } from "lucide-react";
 import RpcDebugPanel from "@/components/wallet/RpcDebugPanel";
+import HostingChecklist from "@/components/wallet/HostingChecklist";
 import {
   isAutoDetectTokensEnabled,
   setAutoDetectTokensEnabled,
@@ -489,32 +490,17 @@ const Admin = () => {
                 Install &amp; harden a server before going live. Full guide at <code className="text-primary">docs/SELF_HOSTING.md</code>.
               </p>
 
-              <div className="space-y-2 text-xs">
-                {[
-                  { title: "Node.js 20+ / bun", detail: "Build the PWA: `bun install && bun run build`" },
-                  { title: "nginx + certbot (TLS)", detail: "Serve `dist/`, force HTTPS, set no-cache for service worker" },
-                  { title: "ufw firewall", detail: "Deny incoming by default; allow SSH (limited) + 80/443 only" },
-                  { title: "fail2ban", detail: "Enable jails: sshd, nginx-http-auth, nginx-botsearch" },
-                  { title: "SSH hardening", detail: "Disable root login & passwords; key-only access" },
-                  { title: "unattended-upgrades", detail: "Auto-apply security patches" },
-                  { title: "Monitoring & backups", detail: "Daily snapshots of `/etc`, `.env`, and node data" },
-                  { title: "Admin wallets", detail: "Set `VITE_ADMIN_WALLETS` in `.env`; super admin is hard-coded" },
-                  { title: "RPC endpoints", detail: "Configure `VITE_GYDS_RPC_URLS` and test failover" },
-                  { title: "Security headers", detail: "X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy" },
-                ].map((item) => (
-                  <div key={item.title} className="p-3 rounded-lg bg-secondary/40 border border-border">
-                    <p className="font-semibold text-foreground">{item.title}</p>
-                    <p className="text-muted-foreground mt-0.5">{item.detail}</p>
-                  </div>
-                ))}
-              </div>
+              <HostingChecklist />
 
               <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
-                <p className="text-xs font-semibold text-foreground mb-1">Quick install</p>
+                <p className="text-xs font-semibold text-foreground mb-1">One-click install + harden</p>
                 <pre className="text-[10px] text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all">
-sudo apt update && sudo apt install -y \
-  nginx certbot python3-certbot-nginx ufw fail2ban \
-  unattended-upgrades git curl
+# 1. install dependencies
+sudo bash scripts/install.sh
+
+# 2. firewall + fail2ban + nginx + TLS
+sudo DOMAIN=wallet.example.com EMAIL=you@example.com \
+  bash scripts/harden.sh
                 </pre>
               </div>
             </div>
