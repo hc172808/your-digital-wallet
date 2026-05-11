@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock, Radar, ShieldCheck } from "lucide-react";
 import RpcDebugPanel from "@/components/wallet/RpcDebugPanel";
+import {
+  isAutoDetectTokensEnabled,
+  setAutoDetectTokensEnabled,
+  isAutoDetectCustomTokensEnabled,
+  setAutoDetectCustomTokensEnabled,
+} from "@/lib/auto-detect-settings";
 import { Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -34,7 +40,9 @@ const Admin = () => {
   const [config, setConfig] = useState<NetworkConfig>(getNetworkConfig());
   const [newRpc, setNewRpc] = useState("");
   const [newAdminAddress, setNewAdminAddress] = useState("");
-  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins" | "debug">("network");
+  const [activeTab, setActiveTab] = useState<"network" | "chains" | "admins" | "detection" | "hosting" | "debug">("network");
+  const [autoTokens, setAutoTokens] = useState(isAutoDetectTokensEnabled());
+  const [autoCustom, setAutoCustom] = useState(isAutoDetectCustomTokensEnabled());
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
   const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string; results?: Record<string, { ok: boolean; latencyMs?: number; error?: string } | "pending"> }>>({});
 
@@ -205,6 +213,8 @@ const Admin = () => {
             { key: "network" as const, label: "GYDS", icon: Globe },
             { key: "chains" as const, label: "Chains", icon: Server },
             { key: "admins" as const, label: "Admins", icon: Users },
+            { key: "detection" as const, label: "Detection", icon: Radar },
+            { key: "hosting" as const, label: "Hosting", icon: ShieldCheck },
             { key: "debug" as const, label: "Debug", icon: Bug },
           ].map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -421,6 +431,91 @@ const Admin = () => {
                 <p className="text-xs text-muted-foreground">
                   Permanent admins can also be set via <code className="text-primary">VITE_ADMIN_WALLETS</code> in .env (comma-separated).
                 </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "detection" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="bg-card rounded-xl p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Radar size={16} className="text-primary" /> Auto-detection
+              </h2>
+
+              <label className="flex items-start justify-between gap-4 cursor-pointer">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Auto-detect tokens</p>
+                  <p className="text-xs text-muted-foreground">Scan known ERC-20s on Ethereum and Polygon hourly.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoTokens}
+                  onChange={(e) => { setAutoTokens(e.target.checked); setAutoDetectTokensEnabled(e.target.checked); }}
+                  className="w-5 h-5 accent-primary mt-1"
+                />
+              </label>
+
+              <label className="flex items-start justify-between gap-4 cursor-pointer">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Auto-refresh custom tokens</p>
+                  <p className="text-xs text-muted-foreground">Re-fetch balances for imported tokens on dashboard mount.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoCustom}
+                  onChange={(e) => { setAutoCustom(e.target.checked); setAutoDetectCustomTokensEnabled(e.target.checked); }}
+                  className="w-5 h-5 accent-primary mt-1"
+                />
+              </label>
+
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                <AlertTriangle size={14} className="text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Settings are stored locally per device.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "hosting" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="bg-card rounded-xl p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <ShieldCheck size={16} className="text-primary" /> Self-hosting checklist
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Install &amp; harden a server before going live. Full guide at <code className="text-primary">docs/SELF_HOSTING.md</code>.
+              </p>
+
+              <div className="space-y-2 text-xs">
+                {[
+                  { title: "Node.js 20+ / bun", detail: "Build the PWA: `bun install && bun run build`" },
+                  { title: "nginx + certbot (TLS)", detail: "Serve `dist/`, force HTTPS, set no-cache for service worker" },
+                  { title: "ufw firewall", detail: "Deny incoming by default; allow SSH (limited) + 80/443 only" },
+                  { title: "fail2ban", detail: "Enable jails: sshd, nginx-http-auth, nginx-botsearch" },
+                  { title: "SSH hardening", detail: "Disable root login & passwords; key-only access" },
+                  { title: "unattended-upgrades", detail: "Auto-apply security patches" },
+                  { title: "Monitoring & backups", detail: "Daily snapshots of `/etc`, `.env`, and node data" },
+                  { title: "Admin wallets", detail: "Set `VITE_ADMIN_WALLETS` in `.env`; super admin is hard-coded" },
+                  { title: "RPC endpoints", detail: "Configure `VITE_GYDS_RPC_URLS` and test failover" },
+                  { title: "Security headers", detail: "X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy" },
+                ].map((item) => (
+                  <div key={item.title} className="p-3 rounded-lg bg-secondary/40 border border-border">
+                    <p className="font-semibold text-foreground">{item.title}</p>
+                    <p className="text-muted-foreground mt-0.5">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
+                <p className="text-xs font-semibold text-foreground mb-1">Quick install</p>
+                <pre className="text-[10px] text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all">
+sudo apt update && sudo apt install -y \
+  nginx certbot python3-certbot-nginx ufw fail2ban \
+  unattended-upgrades git curl
+                </pre>
               </div>
             </div>
           </motion.div>
