@@ -4,6 +4,7 @@ import { Search, Sparkles, Plus, Check, Loader2, X } from "lucide-react";
 import CoinIcon from "@/components/wallet/CoinIcon";
 import { discoverTokens, importDiscoveredToken, getLastDiscoveryTime, setLastDiscoveryTime, type DiscoveredToken } from "@/lib/token-discovery";
 import { getWalletAddress } from "@/lib/wallet-core";
+import { isAutoDetectTokensEnabled } from "@/lib/auto-detect-settings";
 
 interface TokenDiscoveryProps {
   onTokensChanged?: () => void;
