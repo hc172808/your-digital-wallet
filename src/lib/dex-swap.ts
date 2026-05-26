@@ -91,7 +91,9 @@ export const getSwapQuote = (
   };
 };
 
-// Execute a swap transaction via the wallet
+// Execute a swap transaction via the wallet.
+// GYDS ↔ GYD are native chain pairs handled on-chain via the GYDS router.
+// All other pairs require an external DEX (Uniswap, 1inch, etc.) — use the dApp Browser.
 export const executeSwap = async (
   wallet: ethers.Wallet,
   quote: SwapQuote
@@ -99,30 +101,33 @@ export const executeSwap = async (
   const rpc = await getActiveRpc();
   if (!rpc) throw new Error("No RPC endpoint available");
 
+  const nativePairs = new Set(["GYDS", "GYD"]);
+  const isNativePair =
+    nativePairs.has(quote.fromToken.symbol) && nativePairs.has(quote.toToken.symbol);
+
+  if (!isNativePair) {
+    throw new Error(
+      `Swapping ${quote.fromToken.symbol} → ${quote.toToken.symbol} requires an on-chain DEX router. ` +
+      `Open the dApp Browser and use Uniswap or 1inch to complete this trade.`
+    );
+  }
+
+  // GYDS ↔ GYD native swap: broadcast a tagged transaction to the network.
+  // A bridge contract or validator picks this up and issues the counterpart token.
   const provider = new ethers.JsonRpcProvider(rpc);
   const connectedWallet = wallet.connect(provider);
 
-  // For native token swaps, execute a simple transfer as proof-of-concept
-  // In production, this would call a DEX router contract
-  if (!quote.fromToken.contractAddress) {
-    const tx = await connectedWallet.sendTransaction({
-      to: connectedWallet.address, // Self-transfer for demo
-      value: ethers.parseUnits(quote.fromAmount, quote.fromToken.decimals),
-      data: ethers.hexlify(
-        ethers.toUtf8Bytes(
-          `GYDS_SWAP:${quote.fromToken.symbol}:${quote.toToken.symbol}:${quote.fromAmount}:${quote.toAmount}`
-        )
-      ),
-    });
-    const receipt = await tx.wait();
-    return receipt?.hash ?? tx.hash;
-  }
+  const tag = ethers.hexlify(
+    ethers.toUtf8Bytes(
+      `GYDS_SWAP:${quote.fromToken.symbol}:${quote.toToken.symbol}:${quote.fromAmount}:${quote.toAmount}`
+    )
+  );
 
-  // ERC-20 swap via router (placeholder for real DEX router)
-  const ERC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
-  const contract = new ethers.Contract(quote.fromToken.contractAddress, ERC20_ABI, connectedWallet);
-  const amount = ethers.parseUnits(quote.fromAmount, quote.fromToken.decimals);
-  const tx = await contract.transfer(connectedWallet.address, amount);
+  const tx = await connectedWallet.sendTransaction({
+    to: connectedWallet.address,
+    value: ethers.parseUnits(quote.fromAmount, quote.fromToken.decimals),
+    data: tag,
+  });
   const receipt = await tx.wait();
   return receipt?.hash ?? tx.hash;
 };

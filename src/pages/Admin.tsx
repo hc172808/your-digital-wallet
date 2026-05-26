@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock, Radar, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock, Radar, ShieldCheck, Activity, Wifi, WifiOff, Loader2 } from "lucide-react";
 import RpcDebugPanel from "@/components/wallet/RpcDebugPanel";
 import HostingChecklist from "@/components/wallet/HostingChecklist";
 import {
@@ -46,6 +46,8 @@ const Admin = () => {
   const [autoCustom, setAutoCustom] = useState(isAutoDetectCustomTokensEnabled());
   const [adminWallets, setAdminWallets] = useState<string[]>([]);
   const [chainStates, setChainStates] = useState<Record<string, { rpcs: string[]; disabled: boolean; newRpc: string; validating?: string; results?: Record<string, { ok: boolean; latencyMs?: number; error?: string } | "pending"> }>>({});
+  const [rpcPing, setRpcPing] = useState<Record<string, Record<string, { ok: boolean; ms: number } | "pending">>>({});
+  const [testingAll, setTestingAll] = useState<string | null>(null);
 
   useEffect(() => {
     setAdminWallets(getAdminWallets());
@@ -186,6 +188,51 @@ const Admin = () => {
     toast({ title: "Reset to defaults" });
   };
 
+  const handleTestAllRpcs = async (chainId: string) => {
+    const st = chainStates[chainId];
+    if (!st || testingAll) return;
+    setTestingAll(chainId);
+
+    // Mark all as pending
+    const pending: Record<string, "pending"> = {};
+    st.rpcs.forEach((u) => (pending[u] = "pending"));
+    setRpcPing((p) => ({ ...p, [chainId]: pending }));
+
+    const chain = SUPPORTED_CHAINS.find((c) => c.id === chainId);
+    if (!chain) { setTestingAll(null); return; }
+
+    await Promise.all(
+      st.rpcs.map(async (url) => {
+        const t0 = performance.now();
+        let ok = false;
+        try {
+          const ctrl = new AbortController();
+          const timeout = setTimeout(() => ctrl.abort(), 5000);
+          if (chain.type === "evm") {
+            const res = await fetch(url, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
+              signal: ctrl.signal,
+            });
+            const d = await res.json();
+            ok = !!d?.result;
+          } else {
+            const res = await fetch(url, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", method: "getHealth", params: [], id: 1 }),
+              signal: ctrl.signal,
+            });
+            ok = res.ok;
+          }
+          clearTimeout(timeout);
+        } catch { ok = false; }
+        const ms = Math.round(performance.now() - t0);
+        setRpcPing((p) => ({ ...p, [chainId]: { ...p[chainId], [url]: { ok, ms } } }));
+      })
+    );
+    setTestingAll(null);
+  };
+
   const handleToggleChainDisabled = (chainId: string, disabled: boolean) => {
     setChainForceDisabled(chainId, disabled);
     setChainStates((s) => ({ ...s, [chainId]: { ...s[chainId], disabled } }));
@@ -297,9 +344,24 @@ const Admin = () => {
 
         {activeTab === "chains" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <p className="text-xs text-muted-foreground">
-              Configure RPC endpoints for each supported network. New RPCs are validated against the chain ID before being saved. Disable a chain to hide it across the wallet.
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs text-muted-foreground flex-1">
+                Configure RPC endpoints for each supported network. New RPCs are validated against the chain ID before being saved. Disable a chain to hide it across the wallet.
+              </p>
+              <button
+                onClick={() => {
+                  SUPPORTED_CHAINS.forEach((c) => {
+                    if (chainStates[c.id]) handleTestAllRpcs(c.id);
+                  });
+                }}
+                disabled={!!testingAll}
+                data-testid="button-test-all-rpcs"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card text-xs font-semibold text-muted-foreground hover:text-foreground border border-border/60 transition-colors disabled:opacity-50"
+              >
+                {testingAll ? <Loader2 size={12} className="animate-spin" /> : <Activity size={12} />}
+                Test All
+              </button>
+            </div>
             {SUPPORTED_CHAINS.map((c) => {
               const st = chainStates[c.id];
               if (!st) return null;
@@ -329,9 +391,23 @@ const Admin = () => {
 
                   {st.rpcs.map((url) => {
                     const urlDisabled = isRpcUrlDisabled(url);
+                    const ping = rpcPing[c.id]?.[url];
                     return (
                     <div key={url} className="flex items-center gap-2">
-                      <div className={`flex-1 bg-secondary rounded-lg px-3 py-2 text-xs truncate font-mono ${urlDisabled ? "line-through text-muted-foreground" : "text-foreground"}`}>{url}</div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className={`bg-secondary rounded-lg px-3 py-2 text-xs truncate font-mono ${urlDisabled ? "line-through text-muted-foreground" : "text-foreground"}`}>{url}</div>
+                        {ping && ping !== "pending" && (
+                          <div className={`flex items-center gap-1.5 px-2 text-[10px] font-semibold ${ping.ok ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                            {ping.ok ? <Wifi size={10} /> : <WifiOff size={10} />}
+                            {ping.ok ? `${ping.ms} ms` : "Unreachable"}
+                          </div>
+                        )}
+                        {ping === "pending" && (
+                          <div className="flex items-center gap-1.5 px-2 text-[10px] text-muted-foreground">
+                            <Loader2 size={10} className="animate-spin" /> Testing…
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={() => { setRpcUrlDisabled(url, !urlDisabled); setChainStates((s) => ({ ...s })); toast({ title: urlDisabled ? "URL re-enabled" : "URL disabled" }); }}
                         className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${urlDisabled ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}

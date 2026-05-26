@@ -192,6 +192,84 @@ export const getBalanceHistory = (): BalanceSnapshot[] => {
   }
 };
 
+// ─── RPC error parser ───
+
+export const parseRpcError = (err: unknown): string => {
+  const msg: string = (err as any)?.message ?? String(err);
+
+  if (/insufficient funds/i.test(msg))          return "Insufficient balance to cover amount + gas fee.";
+  if (/nonce too low/i.test(msg))               return "Transaction nonce conflict — try again in a moment.";
+  if (/replacement.*underpriced/i.test(msg))    return "Gas price too low to replace pending tx.";
+  if (/gas.*required.*exceeds/i.test(msg))      return "Gas limit too low — the transaction would run out of gas.";
+  if (/execution reverted/i.test(msg)) {
+    const reason = msg.match(/reason="([^"]+)"/)?.[1] ?? msg.match(/revert (.+)/i)?.[1];
+    return reason ? `Contract reverted: ${reason}` : "Contract execution reverted.";
+  }
+  if (/user denied|user rejected/i.test(msg))   return "Transaction rejected by user.";
+  if (/network.*changed/i.test(msg))            return "Network changed mid-transaction — please retry.";
+  if (/timeout|timed out/i.test(msg))           return "RPC request timed out — try a different endpoint.";
+  if (/invalid password|incorrect/i.test(msg))  return "Wrong wallet password.";
+  if (/locked/i.test(msg))                       return msg;
+
+  // Strip noisy ethers.js prefixes
+  return msg.replace(/^Error:\s*/i, "").slice(0, 120);
+};
+
+// ─── Balance helpers ───
+
+export const fetchBalance = async (address: string, rpcUrl: string): Promise<string> => {
+  const res = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBalance", params: [address, "latest"], id: 1 }),
+  });
+  const data = await res.json();
+  if (!data?.result) return "0";
+  const wei = BigInt(data.result);
+  const eth = Number(wei) / 1e18;
+  return eth.toFixed(6);
+};
+
+export const fetchTokenBalance = async (
+  address: string,
+  tokenAddress: string,
+  decimals: number,
+  rpcUrl: string
+): Promise<string> => {
+  const iface = new ethers.Interface(["function balanceOf(address) view returns (uint256)"]);
+  const data = iface.encodeFunctionData("balanceOf", [address]);
+  const res = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0", method: "eth_call",
+      params: [{ to: tokenAddress, data }, "latest"], id: 1,
+    }),
+  });
+  const json = await res.json();
+  if (!json?.result || json.result === "0x") return "0";
+  const raw = BigInt(json.result);
+  const val = Number(raw) / Math.pow(10, decimals);
+  return val.toFixed(decimals > 6 ? 6 : decimals);
+};
+
+// ─── Message signing ───
+
+export const personalSign = async (password: string, message: string): Promise<string> => {
+  const wallet = await unlockWallet(password);
+  return wallet.signMessage(message);
+};
+
+export const signTypedData = async (
+  password: string,
+  domain: ethers.TypedDataDomain,
+  types: Record<string, ethers.TypedDataField[]>,
+  value: Record<string, unknown>
+): Promise<string> => {
+  const wallet = await unlockWallet(password);
+  return wallet.signTypedData(domain, types, value);
+};
+
 // ─── Transaction functions ───
 
 export const sendNativeTransaction = async (
