@@ -510,6 +510,8 @@ const Admin = () => {
                 </p>
               </div>
             </div>
+
+            <AdminAuditLog canMutate={superAdmin} />
           </motion.div>
         )}
 
