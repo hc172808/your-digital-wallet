@@ -24,6 +24,50 @@
 - `mobile/` folder with Capacitor config, Bubblewrap manifest, and
   PWABuilder JSON for direct upload to Android Studio / pwabuilder.com
 
+## 🗺️ Roadmap (added 2026-06-15)
+
+### Security & Hardening
+- [ ] Replace hardcoded super-admin address with signed-message verification (SIWE-style nonce)
+- [ ] RPC rate limiting per session (token bucket in `balance-fetcher.ts`)
+- [ ] Encrypted backup/export with password-derived key rotation (PBKDF2 → Argon2id)
+- [ ] Admin action audit log table (who/when/what)
+
+### Wallet Features
+- [ ] WalletConnect v2 support (EIP-1193 + EIP-6963 multi-injector)
+- [ ] Transaction simulation preview (Tenderly or local trace) before signing
+- [ ] ENS / SNS name resolution in Send flow
+- [ ] Address book with labels and starred contacts
+
+### Multi-chain
+- [ ] Add Base, Arbitrum, Optimism, BSC to default chain registry
+- [ ] Bridge integration (LI.FI or Socket) with quote comparison
+- [ ] Per-chain gas-token auto-detection (native symbol + decimals)
+
+### PWA / Offline
+- [ ] Background Sync API for queued transactions
+- [ ] Web Push for price alerts (VAPID + edge function)
+- [ ] iOS "Add to Home Screen" interactive tutorial
+
+### Admin / Ops
+- [ ] Health metrics dashboard (RPC p95 latency, error rate, block lag)
+- [ ] Feature flags table with per-flag rollout %
+- [ ] Audit log viewer (paginated, filter by admin/action)
+
+### Testing / CI
+- [ ] GitHub Actions: vitest + playwright + lint on PR
+- [ ] Lighthouse CI budget (PWA ≥ 95, Perf ≥ 90)
+- [ ] Visual regression with Playwright screenshots
+
+### UX Polish
+- [ ] Skeleton loaders for AssetsList, TokenDetail, Portfolio chart
+- [ ] Pull-to-refresh on dashboard (touch gesture)
+- [ ] Haptic feedback on tx confirm / alert trigger
+
+### In progress (this turn)
+- [x] Add roadmap to TODO.md
+- [ ] WalletConnect v2 scaffolding
+- [ ] Admin audit-log table + viewer
+
 ## 🟡 Next (handoff to dev)
 
 - Resume Lovable Cloud, then run pending migration so `CloudSyncCard`
