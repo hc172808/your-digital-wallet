@@ -20,7 +20,6 @@ type Step = "choose" | "create-password" | "show-mnemonic" | "import-choose" | "
 const WalletSetup = () => {
   const [step, setStep] = useState<Step>("choose");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [mnemonic, setMnemonic] = useState("");
   const [privateKeyInput, setPrivateKeyInput] = useState("");
   const [mnemonicInput, setMnemonicInput] = useState("");
@@ -29,18 +28,20 @@ const WalletSetup = () => {
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleCreate = async () => {
+  const requestCreate = () => {
     if (password.length < 8) {
       toast({ title: "Password must be at least 8 characters", variant: "destructive" });
       return;
     }
-    if (password !== confirmPassword) {
-      toast({ title: "Passwords don't match", variant: "destructive" });
-      return;
-    }
+    setConfirmOpen(true);
+  };
+
+  const handleCreate = async () => {
+    setConfirmOpen(false);
     setLoading(true);
     try {
       const result = await createWallet(password);
