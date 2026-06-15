@@ -10,6 +10,7 @@ import { getWalletAddress, deleteWallet } from "@/lib/wallet-core";
 import { getAutoLockTimeout, setAutoLockTimeout, AUTO_LOCK_OPTIONS, lockSession } from "@/lib/session-lock";
 import { isAdminWallet } from "@/lib/admin-auth";
 import AppUpdateCard from "@/components/wallet/AppUpdateCard";
+import WalletConnectCard from "@/components/wallet/WalletConnectCard";
 
 type SettingsPanel = null | "profile" | "security" | "notifications" | "appearance" | "help";
 
