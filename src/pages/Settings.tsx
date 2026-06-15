@@ -274,8 +274,9 @@ const Settings = () => {
                 ))}
               </div>
 
-              <div className="mt-6">
+              <div className="mt-6 space-y-4">
                 <AppUpdateCard />
+                <WalletConnectCard />
               </div>
 
               <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} onClick={handleLogout}
