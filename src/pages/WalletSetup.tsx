@@ -300,6 +300,22 @@ const WalletSetup = () => {
           )}
         </AnimatePresence>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm your password</AlertDialogTitle>
+            <AlertDialogDescription>
+              You entered a password of {password.length} characters. This encrypts your wallet
+              locally and cannot be recovered if forgotten. Continue creating your wallet?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCreate}>Yes, create wallet</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
