@@ -139,18 +139,8 @@ const WalletSetup = () => {
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Confirm Password</label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat password"
-                    className="w-full bg-card rounded-xl p-4 text-foreground outline-none placeholder:text-muted-foreground/40 border border-border focus:border-primary transition-colors"
-                  />
-                </div>
                 <button
-                  onClick={handleCreate}
+                  onClick={requestCreate}
                   disabled={loading}
                   className="w-full gradient-primary text-primary-foreground font-semibold py-4 rounded-xl glow-primary hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
                 >
