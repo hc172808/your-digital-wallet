@@ -4,6 +4,16 @@ import { Plus, Download, Shield, Eye, EyeOff, Copy, Check, Loader2, AlertTriangl
 import { createWallet, importFromMnemonic, importFromPrivateKey, hasWallet } from "@/lib/wallet-core";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Step = "choose" | "create-password" | "show-mnemonic" | "import-choose" | "import-mnemonic" | "import-key" | "import-password";
 
