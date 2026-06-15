@@ -74,6 +74,7 @@ export const addAdminWallet = (
   const current = getRuntimeAdmins();
   current.push(normalized);
   localStorage.setItem(RUNTIME_ADMINS_KEY, JSON.stringify(current));
+  void tryAudit({ actor: caller!, action: "admin.add", target: normalized });
   return "ok";
 };
 
@@ -94,8 +95,19 @@ export const removeAdminWallet = (
   if (!current.includes(normalized)) return "not-found";
   const updated = current.filter((w) => w !== normalized);
   localStorage.setItem(RUNTIME_ADMINS_KEY, JSON.stringify(updated));
+  void tryAudit({ actor: caller!, action: "admin.remove", target: normalized });
   return "ok";
 };
+
+// Lazy import to avoid circular deps in tests
+async function tryAudit(entry: { actor: string; action: "admin.add" | "admin.remove"; target: string }) {
+  try {
+    const { recordAudit } = await import("./admin-audit-log");
+    recordAudit(entry);
+  } catch {
+    // ignore — audit log is non-critical
+  }
+}
 
 /** Check if an admin wallet is from env (non-removable) */
 export const isEnvAdmin = (address: string): boolean => {
