@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Plus, Trash2, Save, Server, Globe, Users, UserPlus, AlertTriangle, Power, RotateCcw, Check, X, Bug, Crown, Lock, Radar, ShieldCheck, Activity, Wifi, WifiOff, Loader2 } from "lucide-react";
 import RpcDebugPanel from "@/components/wallet/RpcDebugPanel";
 import HostingChecklist from "@/components/wallet/HostingChecklist";
+import AdminAuditLog from "@/components/wallet/AdminAuditLog";
 import {
   isAutoDetectTokensEnabled,
   setAutoDetectTokensEnabled,
