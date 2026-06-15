@@ -4,13 +4,22 @@ import { Plus, Download, Shield, Eye, EyeOff, Copy, Check, Loader2, AlertTriangl
 import { createWallet, importFromMnemonic, importFromPrivateKey, hasWallet } from "@/lib/wallet-core";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Step = "choose" | "create-password" | "show-mnemonic" | "import-choose" | "import-mnemonic" | "import-key" | "import-password";
 
 const WalletSetup = () => {
   const [step, setStep] = useState<Step>("choose");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [mnemonic, setMnemonic] = useState("");
   const [privateKeyInput, setPrivateKeyInput] = useState("");
   const [mnemonicInput, setMnemonicInput] = useState("");
@@ -19,18 +28,20 @@ const WalletSetup = () => {
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleCreate = async () => {
+  const requestCreate = () => {
     if (password.length < 8) {
       toast({ title: "Password must be at least 8 characters", variant: "destructive" });
       return;
     }
-    if (password !== confirmPassword) {
-      toast({ title: "Passwords don't match", variant: "destructive" });
-      return;
-    }
+    setConfirmOpen(true);
+  };
+
+  const handleCreate = async () => {
+    setConfirmOpen(false);
     setLoading(true);
     try {
       const result = await createWallet(password);
@@ -128,18 +139,8 @@ const WalletSetup = () => {
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Confirm Password</label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat password"
-                    className="w-full bg-card rounded-xl p-4 text-foreground outline-none placeholder:text-muted-foreground/40 border border-border focus:border-primary transition-colors"
-                  />
-                </div>
                 <button
-                  onClick={handleCreate}
+                  onClick={requestCreate}
                   disabled={loading}
                   className="w-full gradient-primary text-primary-foreground font-semibold py-4 rounded-xl glow-primary hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
                 >
@@ -299,6 +300,22 @@ const WalletSetup = () => {
           )}
         </AnimatePresence>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm your password</AlertDialogTitle>
+            <AlertDialogDescription>
+              You entered a password of {password.length} characters. This encrypts your wallet
+              locally and cannot be recovered if forgotten. Continue creating your wallet?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCreate}>Yes, create wallet</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

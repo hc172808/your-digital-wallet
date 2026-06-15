@@ -10,6 +10,7 @@ import { getWalletAddress, deleteWallet } from "@/lib/wallet-core";
 import { getAutoLockTimeout, setAutoLockTimeout, AUTO_LOCK_OPTIONS, lockSession } from "@/lib/session-lock";
 import { isAdminWallet } from "@/lib/admin-auth";
 import AppUpdateCard from "@/components/wallet/AppUpdateCard";
+import WalletConnectCard from "@/components/wallet/WalletConnectCard";
 
 type SettingsPanel = null | "profile" | "security" | "notifications" | "appearance" | "help";
 
@@ -274,8 +275,9 @@ const Settings = () => {
                 ))}
               </div>
 
-              <div className="mt-6">
+              <div className="mt-6 space-y-4">
                 <AppUpdateCard />
+                <WalletConnectCard />
               </div>
 
               <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} onClick={handleLogout}

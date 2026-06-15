@@ -65,8 +65,10 @@
 
 ### In progress (this turn)
 - [x] Add roadmap to TODO.md
-- [ ] WalletConnect v2 scaffolding
-- [ ] Admin audit-log table + viewer
+- [x] Admin audit-log table + viewer (`admin-audit-log.ts` + `AdminAuditLog.tsx`, 13 tests)
+- [x] WalletConnect v2 scaffolding (`walletconnect-v2.ts` URI parser + session store, `WalletConnectCard` in Settings, 9 tests). Next: install `@walletconnect/sign-client` and wire `pair()` to the real relay.
+- [x] Removed password-confirm field on wallet create; replaced with AlertDialog confirm popup
+- [ ] Next up: ENS / SNS resolution in Send flow
 
 ## 🟡 Next (handoff to dev)
 
