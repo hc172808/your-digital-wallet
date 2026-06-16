@@ -4,7 +4,12 @@ import {
   isWcUri,
   saveSession,
   listSessions,
+  listAllSessions,
   disconnectSession,
+  restoreSessions,
+  getReconnectLog,
+  clearReconnectLog,
+  isExpired,
   pair,
 } from "../walletconnect-v2";
 
@@ -60,22 +65,73 @@ describe("walletconnect-v2 session persistence", () => {
     const list = listSessions();
     expect(list).toHaveLength(1);
     expect(list[0].peerName).toBe("Uniswap");
+    expect(list[0].status).toBe("active");
+    expect(list[0].expiry).toBeGreaterThan(0);
   });
 
   it("dedupes by topic on save", () => {
-    saveSession({ topic: "t1", chains: [], accounts: [], createdAt: 1 });
-    saveSession({ topic: "t1", chains: [], accounts: [], createdAt: 2 });
+    saveSession({ topic: "t1", createdAt: 1 });
+    saveSession({ topic: "t1", createdAt: 2 });
     expect(listSessions()).toHaveLength(1);
     expect(listSessions()[0].createdAt).toBe(2);
   });
 
   it("disconnectSession removes the topic", () => {
-    saveSession({ topic: "t1", chains: [], accounts: [], createdAt: 1 });
-    saveSession({ topic: "t2", chains: [], accounts: [], createdAt: 2 });
+    saveSession({ topic: "t1", createdAt: 1 });
+    saveSession({ topic: "t2", createdAt: 2 });
     disconnectSession("t1");
     const list = listSessions();
     expect(list).toHaveLength(1);
     expect(list[0].topic).toBe("t2");
+  });
+});
+
+describe("walletconnect-v2 auto-reconnect", () => {
+  it("restoreSessions rehydrates live sessions and stamps lastReconnectAt", () => {
+    saveSession({ topic: "t1", peerName: "Uniswap" });
+    const restored = restoreSessions();
+    expect(restored).toHaveLength(1);
+    expect(restored[0].topic).toBe("t1");
+    expect(restored[0].lastReconnectAt).toBeGreaterThan(0);
+    const log = getReconnectLog();
+    expect(log[0].outcome).toBe("restored");
+  });
+
+  it("flags expired sessions instead of restoring them", () => {
+    const past = Math.floor(Date.now() / 1000) - 10;
+    saveSession({ topic: "t1", expiry: past });
+    const restored = restoreSessions();
+    expect(restored).toHaveLength(0);
+    const all = listAllSessions();
+    expect(all[0].status).toBe("expired");
+    expect(getReconnectLog()[0].outcome).toBe("expired");
+  });
+
+  it("isExpired returns true for past expiry", () => {
+    expect(isExpired({ topic: "x", chains: [], accounts: [], createdAt: 0, status: "active", expiry: 1 })).toBe(true);
+  });
+
+  it("listSessions hides expired entries", () => {
+    saveSession({ topic: "t1", expiry: Math.floor(Date.now() / 1000) - 1 });
+    saveSession({ topic: "t2" });
+    restoreSessions();
+    const live = listSessions();
+    expect(live.map((s) => s.topic)).toEqual(["t2"]);
+  });
+
+  it("clearReconnectLog empties the log", () => {
+    saveSession({ topic: "t1" });
+    restoreSessions();
+    expect(getReconnectLog().length).toBeGreaterThan(0);
+    clearReconnectLog();
+    expect(getReconnectLog()).toEqual([]);
+  });
+
+  it("reconnect log is capped at 100 entries", () => {
+    for (let i = 0; i < 60; i++) saveSession({ topic: `t${i}` });
+    restoreSessions();
+    restoreSessions();
+    expect(getReconnectLog().length).toBeLessThanOrEqual(100);
   });
 });
 

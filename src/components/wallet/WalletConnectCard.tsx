@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link2, Trash2, AlertCircle } from "lucide-react";
+import { Link2, Trash2, AlertCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   isWcUri,
@@ -7,18 +7,30 @@ import {
   listSessions,
   disconnectSession,
   saveSession,
+  getReconnectLog,
   type WcSession,
+  type WcReconnectEvent,
 } from "@/lib/walletconnect-v2";
+import { useWcAutoReconnect } from "@/hooks/use-wc-auto-reconnect";
 
 const WalletConnectCard = () => {
   const [uri, setUri] = useState("");
   const [busy, setBusy] = useState(false);
   const [sessions, setSessions] = useState<WcSession[]>([]);
+  const [log, setLog] = useState<WcReconnectEvent[]>([]);
   const { toast } = useToast();
+  const restored = useWcAutoReconnect();
 
   useEffect(() => {
     setSessions(listSessions());
-  }, []);
+    setLog(getReconnectLog());
+    if (restored.length > 0) {
+      toast({
+        title: `Reconnected ${restored.length} WalletConnect session${restored.length === 1 ? "" : "s"}`,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restored.length]);
 
   const handlePair = async () => {
     if (!isWcUri(uri.trim())) {
@@ -28,19 +40,15 @@ const WalletConnectCard = () => {
     setBusy(true);
     try {
       const parsed = await pair(uri.trim());
-      // Stub: persist a pending session so the UI reflects the pairing
       saveSession({
         topic: parsed.topic,
         peerName: "Pending dApp",
-        chains: [],
-        accounts: [],
-        createdAt: Date.now(),
       });
       setSessions(listSessions());
       setUri("");
       toast({
         title: "Pairing started",
-        description: "Sign client integration pending — see walletconnect-v2.ts",
+        description: "Session persisted — will auto-reconnect after reload.",
       });
     } catch (err: any) {
       toast({ title: "Pairing failed", description: err.message, variant: "destructive" });
@@ -113,6 +121,24 @@ const WalletConnectCard = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {log.length > 0 && (
+        <details className="mt-3 text-xs text-muted-foreground">
+          <summary className="cursor-pointer flex items-center gap-1">
+            <RefreshCw size={12} /> Reconnect log ({log.length})
+          </summary>
+          <ul className="mt-2 space-y-1 max-h-32 overflow-auto">
+            {log.slice(0, 20).map((e, i) => (
+              <li key={i} className="flex justify-between gap-2">
+                <span className="truncate">{e.topic}</span>
+                <span className={e.outcome === "restored" ? "text-primary" : "text-destructive"}>
+                  {e.outcome} · {new Date(e.ts).toLocaleTimeString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );
