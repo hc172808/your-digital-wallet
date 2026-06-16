@@ -122,6 +122,24 @@ const WalletConnectCard = () => {
           ))}
         </div>
       )}
+
+      {log.length > 0 && (
+        <details className="mt-3 text-xs text-muted-foreground">
+          <summary className="cursor-pointer flex items-center gap-1">
+            <RefreshCw size={12} /> Reconnect log ({log.length})
+          </summary>
+          <ul className="mt-2 space-y-1 max-h-32 overflow-auto">
+            {log.slice(0, 20).map((e, i) => (
+              <li key={i} className="flex justify-between gap-2">
+                <span className="truncate">{e.topic}</span>
+                <span className={e.outcome === "restored" ? "text-primary" : "text-destructive"}>
+                  {e.outcome} · {new Date(e.ts).toLocaleTimeString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 };
