@@ -1,17 +1,20 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Copy, Check, Share2 } from "lucide-react";
+import { ArrowLeft, Copy, Check, Share2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import BottomNav from "@/components/wallet/BottomNav";
+import ChainSelector from "@/components/wallet/ChainSelector";
 import { getWalletAddress } from "@/lib/wallet-core";
-import { getNetworkConfig } from "@/lib/network-config";
+import { getActiveChainId } from "@/lib/chain-context";
+import { getChainById } from "@/lib/chain-adapter";
 import { useToast } from "@/hooks/use-toast";
 
 const Receive = () => {
   const [copied, setCopied] = useState(false);
+  const [activeChainId, setActiveChainId] = useState<string>(getActiveChainId());
   const walletAddress = getWalletAddress() || "";
-  const config = getNetworkConfig();
+  const activeChain = useMemo(() => getChainById(activeChainId) || getChainById("gyds")!, [activeChainId]);
   const { toast } = useToast();
 
   const handleCopy = () => {
@@ -24,7 +27,7 @@ const Receive = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "My GYDS Wallet Address",
+          title: `My ${activeChain.name} Address`,
           text: walletAddress,
         });
       } catch {
@@ -36,20 +39,37 @@ const Receive = () => {
     }
   };
 
-  // EIP-681 format for better wallet compatibility
-  const qrValue = walletAddress ? `ethereum:${walletAddress}@${config.chainId}` : "";
+  // QR URI per chain type. EVM: EIP-681. Solana: solana:<addr>.
+  const qrValue = useMemo(() => {
+    if (!walletAddress) return "";
+    if (activeChain.type === "solana") return `solana:${walletAddress}`;
+    const cid = activeChain.chainId ?? 1;
+    return `ethereum:${walletAddress}@${cid}`;
+  }, [walletAddress, activeChain]);
+
+  const isEvm = activeChain.type === "evm";
 
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="max-w-lg mx-auto px-4 pt-6">
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6">
           <Link to="/" className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={20} />
           </Link>
-          <h1 className="text-xl font-display font-bold text-foreground">Receive Crypto</h1>
+          <h1 className="text-xl font-display font-bold text-foreground flex-1">Receive Crypto</h1>
+          <ChainSelector onChainChange={setActiveChainId} />
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {/* Chain banner */}
+          <div className="bg-card rounded-xl px-4 py-3 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Network:</span>
+            <span className="text-sm font-semibold text-foreground">{activeChain.name}</span>
+            <span className="ml-auto text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+              {isEvm ? `Chain ${activeChain.chainId}` : "Solana"}
+            </span>
+          </div>
+
           {/* QR Code */}
           <div className="flex justify-center">
             <div className="bg-white rounded-2xl p-4 shadow-lg">
@@ -71,7 +91,7 @@ const Receive = () => {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Scan this QR code to send tokens to your wallet
+            Scan this QR code to send tokens on <span className="text-foreground font-semibold">{activeChain.name}</span>
           </p>
 
           {/* Address */}
@@ -103,9 +123,21 @@ const Receive = () => {
             </button>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Send <span className="text-primary font-semibold">GYDS</span>, <span className="text-primary font-semibold">GYD</span>, or any ERC-20 token on {config.name} to this address.
-          </p>
+          <div className="bg-card/50 border border-border/40 rounded-xl p-3 flex items-start gap-2 text-xs text-muted-foreground">
+            <Info size={14} className="text-primary shrink-0 mt-0.5" />
+            {isEvm ? (
+              <span>
+                This address accepts <span className="text-foreground font-semibold">{activeChain.symbol}</span> and any
+                ERC-20 token on <span className="text-foreground font-semibold">{activeChain.name}</span>. Only send assets
+                on this network — sending tokens from a different chain may result in loss of funds.
+              </span>
+            ) : (
+              <span>
+                {activeChain.name} addresses use a different key format. Receiving on {activeChain.name} requires a
+                {activeChain.name}-native wallet derivation, which is not yet enabled in this build.
+              </span>
+            )}
+          </div>
         </motion.div>
       </div>
       <BottomNav />
