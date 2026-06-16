@@ -23,6 +23,10 @@
   - `src/hooks/__tests__/use-price-alert-monitor.test.tsx` — polling + toast
 - `mobile/` folder with Capacitor config, Bubblewrap manifest, and
   PWABuilder JSON for direct upload to Android Studio / pwabuilder.com
+- Multi-chain Send/Receive: ChainSelector on both pages; Send routes through
+  EVMAdapter for any enabled EVM chain (GYDS, Ethereum, Polygon, …); token
+  list filters to the active chain's native + imported tokens; Receive QR
+  uses EIP-681 with the correct `chainId` per chain (and `solana:` for SOL)
 
 ## 🗺️ Roadmap (added 2026-06-15)
 
