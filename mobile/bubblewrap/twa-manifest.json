@@ -1,6 +1,6 @@
 {
   "packageId": "io.netlifegy.gyds.twa",
-  "host": "YOUR-DOMAIN",
+  "host": "w.netlifegy.com",
   "name": "GYDS Wallet",
   "launcherName": "GYDS",
   "display": "standalone",
@@ -9,15 +9,30 @@
   "backgroundColor": "#0f1318",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://YOUR-DOMAIN/pwa-512x512.png",
-  "maskableIconUrl": "https://YOUR-DOMAIN/pwa-512x512.png",
+  "iconUrl": "https://w.netlifegy.com/pwa-512x512.png",
+  "maskableIconUrl": "https://w.netlifegy.com/pwa-512x512.png",
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "shortcuts": [
-    { "name": "Price Alerts", "url": "/alerts", "iconUrl": "https://YOUR-DOMAIN/pwa-192x192.png" },
-    { "name": "Swap",         "url": "/swap",   "iconUrl": "https://YOUR-DOMAIN/pwa-192x192.png" }
+    {
+      "name": "Price Alerts",
+      "url": "/alerts",
+      "iconUrl": "https://w.netlifegy.com/pwa-192x192.png"
+    },
+    {
+      "name": "Swap",
+      "url": "/swap",
+      "iconUrl": "https://w.netlifegy.com/pwa-192x192.png"
+    }
   ],
   "fallbackType": "customtabs",
-  "features": { "locationDelegation": { "enabled": false } },
-  "signingKey": { "path": "./android.keystore", "alias": "android" }
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    }
+  },
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  }
 }

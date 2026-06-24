@@ -9,7 +9,7 @@
   "backgroundColor": "#0f1318",
   "display": "standalone",
   "orientation": "portrait",
-  "startUrl": "/",
+  "startUrl": "https://w.netlifegy.com/",
   "iconUrl": "/pwa-512x512.png",
   "maskableIconUrl": "/pwa-512x512.png",
   "monochromeIconUrl": "/pwa-192x192.png",
