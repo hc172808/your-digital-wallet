@@ -59,8 +59,20 @@ export function useChainBalances(
     };
 
     run();
+    // Periodic refresh while page is open
     const interval = setInterval(run, 30000);
-    return () => { cancelled = true; clearInterval(interval); };
+    // Refresh on window focus / tab visibility — catches balance changes
+    // that happened while the user was away (incoming transfers, swaps, etc).
+    const onFocus = () => run();
+    const onVisible = () => { if (document.visibilityState === "visible") run(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [walletAddress, chain.id, assets.length, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { balances, loading };
