@@ -142,6 +142,44 @@ const Receive = () => {
               </span>
             )}
           </div>
+
+          {/* Per-chain asset list — shows what users will receive into */}
+          {isEvm && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <Coins size={14} /> Assets on {activeChain.name}
+                </label>
+                {loadingBalances && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+              </div>
+              <div className="bg-card rounded-xl divide-y divide-border/40 overflow-hidden">
+                {assets.map((a) => {
+                  const bal = balances[balanceKey(a)];
+                  return (
+                    <div key={balanceKey(a)} className="flex items-center gap-3 px-4 py-3">
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${a.color} flex items-center justify-center text-[11px] font-bold text-white`}>
+                        {a.symbol.slice(0, 2)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{a.symbol}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{a.name}</p>
+                      </div>
+                      <p className="text-sm font-mono text-foreground">
+                        {bal !== undefined
+                          ? parseFloat(bal).toLocaleString(undefined, { maximumFractionDigits: 6 })
+                          : "—"}
+                      </p>
+                    </div>
+                  );
+                })}
+                {assets.length === 1 && (
+                  <p className="text-[11px] text-muted-foreground px-4 py-2.5 text-center">
+                    Import a token to see its balance here.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
       <BottomNav />
