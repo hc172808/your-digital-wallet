@@ -6,14 +6,15 @@ import BottomNav from "@/components/wallet/BottomNav";
 import ChainSelector from "@/components/wallet/ChainSelector";
 import QrScanner from "@/components/wallet/QrScanner";
 import { getActiveRpc } from "@/lib/network-config";
-import { getCustomTokens } from "@/lib/custom-tokens";
 import {
   getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction,
   checkLockout, addressSchema, amountSchema,
   fetchBalance, fetchTokenBalance, parseRpcError,
 } from "@/lib/wallet-core";
 import { getActiveChainId } from "@/lib/chain-context";
-import { getChainById, EVMAdapter, type ChainConfig } from "@/lib/chain-adapter";
+import { getChainById, EVMAdapter } from "@/lib/chain-adapter";
+import { getChainAssets, type ChainAsset } from "@/lib/chain-assets";
+import { useChainBalances, balanceKey } from "@/hooks/use-chain-balances";
 import { saveTransaction } from "@/lib/transaction-history";
 import { estimateGasFee, type FeeEstimate } from "@/lib/fee-estimator";
 import { useToast } from "@/hooks/use-toast";
@@ -24,44 +25,17 @@ const TIER_ICONS = { slow: Clock, standard: Gauge, fast: Zap };
 const TIER_LABELS = { slow: "Slow", standard: "Standard", fast: "Fast" };
 const TIER_COLORS = { slow: "text-muted-foreground", standard: "text-primary", fast: "text-amber-400" };
 
-interface TokenChoice {
-  symbol: string;
-  name: string;
-  contractAddress: string | null;
-  decimals: number;
-  chainId: number;
-}
-
-const nativeTokenFor = (chain: ChainConfig): TokenChoice => ({
-  symbol: chain.symbol,
-  name: `${chain.symbol} (Native)`,
-  contractAddress: null,
-  decimals: chain.decimals,
-  chainId: chain.chainId ?? 0,
-});
-
 const Send = () => {
   const [activeChainId, setActiveChainId] = useState<string>(getActiveChainId());
   const activeChain = useMemo(() => getChainById(activeChainId) || getChainById("gyds")!, [activeChainId]);
   const isEvm = activeChain.type === "evm";
   const isGyds = activeChain.id === "gyds";
 
-  // Tokens available for the active chain
-  const allTokens: TokenChoice[] = useMemo(() => {
-    const native = nativeTokenFor(activeChain);
-    const extras: TokenChoice[] = [];
-    if (isGyds) {
-      extras.push({ symbol: "GYD", name: "GYD Stablecoin", contractAddress: null, decimals: 6, chainId: 13370 });
-    }
-    const custom = getCustomTokens()
-      .filter((t) => (t.chainId ?? 13370) === (activeChain.chainId ?? 0))
-      .map<TokenChoice>((t) => ({
-        symbol: t.symbol, name: t.name,
-        contractAddress: t.contractAddress, decimals: t.decimals,
-        chainId: t.chainId ?? 13370,
-      }));
-    return [native, ...extras, ...custom];
-  }, [activeChain, isGyds]);
+  // Tokens available for the active chain (native + GYD + custom imports on this chain)
+  const allTokens: ChainAsset[] = useMemo(
+    () => getChainAssets(activeChain),
+    [activeChain],
+  );
 
   const [selectedToken, setSelectedToken] = useState<TokenChoice>(allTokens[0]);
   const [amount, setAmount]               = useState("");
