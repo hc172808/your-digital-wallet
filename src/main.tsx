@@ -1,6 +1,15 @@
+import { Buffer } from "buffer";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+
+// Polyfill Buffer for browser — required by @solana/web3.js, walletconnect,
+// and several crypto libs. Without this the app crashes before render and the
+// splash screen never dismisses.
+if (typeof window !== "undefined" && !(window as unknown as { Buffer?: unknown }).Buffer) {
+  (window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
+}
+
 
 // Prevent service worker in iframe / preview environments
 const isInIframe = (() => {
