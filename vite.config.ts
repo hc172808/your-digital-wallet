@@ -122,7 +122,17 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        // Force the real `buffer` polyfill instead of Vite's externalized stub
+        // so @solana/web3.js / walletconnect can access Buffer in the browser.
+        buffer: "buffer/",
       },
+    },
+    define: {
+      // Some libs check `global` / `process.env.NODE_ENV` at module init.
+      global: "globalThis",
+    },
+    optimizeDeps: {
+      include: ["buffer"],
     },
   };
 });

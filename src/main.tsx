@@ -1,6 +1,11 @@
+// MUST be first import — polyfills Buffer/global/process for browser before
+// any other module (including @solana/web3.js, walletconnect) is evaluated.
+import "./polyfills";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+
+
 
 // Prevent service worker in iframe / preview environments
 const isInIframe = (() => {
@@ -32,3 +37,8 @@ const dismissSplash = () => {
 requestAnimationFrame(dismissSplash);
 // Fallback: always dismiss after 3s even if render is slow
 setTimeout(dismissSplash, 3000);
+// Last-resort: if any uncaught error happens before render completes,
+// force-dismiss so the user never sees a permanently-stuck splash.
+window.addEventListener("error", () => setTimeout(dismissSplash, 100));
+window.addEventListener("unhandledrejection", () => setTimeout(dismissSplash, 100));
+
