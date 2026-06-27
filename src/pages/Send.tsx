@@ -213,20 +213,27 @@ const Send = () => {
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Select Token ({allTokens.length} available)</label>
             <div className="flex gap-2 flex-wrap">
-              {allTokens.map((t) => (
-                <button
-                  key={`${t.chainId}-${t.symbol}-${t.contractAddress ?? "native"}`}
-                  data-testid={`token-${t.symbol}`}
-                  onClick={() => { setSelectedToken(t); setAmount(""); }}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    selectedToken.symbol === t.symbol && selectedToken.contractAddress === t.contractAddress
-                      ? "gradient-primary text-primary-foreground glow-primary"
-                      : "bg-card text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {t.symbol}
-                </button>
-              ))}
+              {allTokens.map((t) => {
+                const tBal = balances[balanceKey(t)];
+                const isActive = selectedToken.symbol === t.symbol && selectedToken.contractAddress === t.contractAddress;
+                return (
+                  <button
+                    key={`${t.chainId}-${t.symbol}-${t.contractAddress ?? "native"}`}
+                    data-testid={`token-${t.symbol}`}
+                    onClick={() => { setSelectedToken(t); setAmount(""); }}
+                    className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all flex flex-col items-start leading-tight ${
+                      isActive
+                        ? "gradient-primary text-primary-foreground glow-primary"
+                        : "bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span>{t.symbol}</span>
+                    <span className={`text-[10px] font-normal ${isActive ? "opacity-90" : "text-muted-foreground/70"}`}>
+                      {tBal !== undefined ? parseFloat(tBal).toLocaleString(undefined, { maximumFractionDigits: 4 }) : "—"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
