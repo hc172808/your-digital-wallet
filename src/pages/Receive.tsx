@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Copy, Check, Share2, Info } from "lucide-react";
+import { ArrowLeft, Copy, Check, Share2, Info, Loader2, Coins } from "lucide-react";
 import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import BottomNav from "@/components/wallet/BottomNav";
@@ -8,6 +8,8 @@ import ChainSelector from "@/components/wallet/ChainSelector";
 import { getWalletAddress } from "@/lib/wallet-core";
 import { getActiveChainId } from "@/lib/chain-context";
 import { getChainById } from "@/lib/chain-adapter";
+import { getChainAssets } from "@/lib/chain-assets";
+import { useChainBalances, balanceKey } from "@/hooks/use-chain-balances";
 import { useToast } from "@/hooks/use-toast";
 
 const Receive = () => {
@@ -15,6 +17,8 @@ const Receive = () => {
   const [activeChainId, setActiveChainId] = useState<string>(getActiveChainId());
   const walletAddress = getWalletAddress() || "";
   const activeChain = useMemo(() => getChainById(activeChainId) || getChainById("gyds")!, [activeChainId]);
+  const assets = useMemo(() => getChainAssets(activeChain), [activeChain]);
+  const { balances, loading: loadingBalances } = useChainBalances(activeChain, assets, walletAddress);
   const { toast } = useToast();
 
   const handleCopy = () => {
