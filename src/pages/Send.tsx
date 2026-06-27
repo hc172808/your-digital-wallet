@@ -37,7 +37,7 @@ const Send = () => {
     [activeChain],
   );
 
-  const [selectedToken, setSelectedToken] = useState<TokenChoice>(allTokens[0]);
+  const [selectedToken, setSelectedToken] = useState<ChainAsset>(allTokens[0]);
   const [amount, setAmount]               = useState("");
   const [address, setAddress]             = useState("");
   const [password, setPassword]           = useState("");
@@ -49,10 +49,16 @@ const Send = () => {
   const [feeEstimate, setFeeEstimate]     = useState<FeeEstimate | null>(null);
   const [loadingFee, setLoadingFee]       = useState(false);
   const [gasTier, setGasTier]             = useState<GasTier>("standard");
-  const [balance, setBalance]             = useState<string | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(false);
+  const [refreshKey, setRefreshKey]       = useState(0);
   const { toast } = useToast();
   const wallet = getWalletAddress();
+
+  // Live balances for every asset on the active chain — drives both the
+  // per-chip balance hints and the selected-token MAX/overflow logic.
+  const { balances, loading: loadingBalance } = useChainBalances(
+    activeChain, allTokens, wallet, refreshKey,
+  );
+  const balance = balances[balanceKey(selectedToken)] ?? null;
 
   // Reset selected token when chain changes
   useEffect(() => {
@@ -62,36 +68,6 @@ const Send = () => {
     setTxError(null);
     setFeeEstimate(null);
   }, [activeChainId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Fetch live balance whenever token / chain / wallet changes ──
-  useEffect(() => {
-    if (!wallet || !isEvm) { setBalance(null); return; }
-    setBalance(null);
-    setLoadingBalance(true);
-
-    (async () => {
-      try {
-        if (isGyds) {
-          const rpc = await getActiveRpc();
-          if (!rpc) { setLoadingBalance(false); return; }
-          const bal = selectedToken.contractAddress
-            ? await fetchTokenBalance(wallet, selectedToken.contractAddress, selectedToken.decimals, rpc)
-            : await fetchBalance(wallet, rpc);
-          setBalance(bal);
-        } else {
-          const adapter = new EVMAdapter(activeChain);
-          const bal = selectedToken.contractAddress
-            ? await adapter.getTokenBalance(selectedToken.contractAddress, wallet, selectedToken.decimals)
-            : await adapter.getNativeBalance(wallet);
-          setBalance(bal);
-        }
-      } catch {
-        setBalance(null);
-      } finally {
-        setLoadingBalance(false);
-      }
-    })();
-  }, [wallet, selectedToken, activeChain, isEvm, isGyds]);
 
   const balanceNum   = balance !== null ? parseFloat(balance) : null;
   const amountNum    = parseFloat(amount) || 0;
