@@ -168,22 +168,8 @@ const Send = () => {
         txHash: hash, timestamp: Date.now(), status: "confirmed",
       });
 
-      // Refresh balance
-      if (isGyds) {
-        const rpc = await getActiveRpc();
-        if (rpc) {
-          const bal = selectedToken.contractAddress
-            ? await fetchTokenBalance(wallet, selectedToken.contractAddress, selectedToken.decimals, rpc)
-            : await fetchBalance(wallet, rpc);
-          setBalance(bal);
-        }
-      } else {
-        const adapter = new EVMAdapter(activeChain);
-        const bal = selectedToken.contractAddress
-          ? await adapter.getTokenBalance(selectedToken.contractAddress, wallet, selectedToken.decimals)
-          : await adapter.getNativeBalance(wallet);
-        setBalance(bal);
-      }
+      // Refresh balances for all chain assets
+      setRefreshKey((k) => k + 1);
 
       toast({ title: "Transaction sent!", description: `TX: ${hash.slice(0, 10)}…` });
     } catch (err: unknown) {
