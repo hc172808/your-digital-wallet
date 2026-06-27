@@ -6,14 +6,15 @@ import BottomNav from "@/components/wallet/BottomNav";
 import ChainSelector from "@/components/wallet/ChainSelector";
 import QrScanner from "@/components/wallet/QrScanner";
 import { getActiveRpc } from "@/lib/network-config";
-import { getCustomTokens } from "@/lib/custom-tokens";
 import {
   getWalletAddress, unlockWallet, sendNativeTransaction, sendERC20Transaction,
   checkLockout, addressSchema, amountSchema,
   fetchBalance, fetchTokenBalance, parseRpcError,
 } from "@/lib/wallet-core";
 import { getActiveChainId } from "@/lib/chain-context";
-import { getChainById, EVMAdapter, type ChainConfig } from "@/lib/chain-adapter";
+import { getChainById, EVMAdapter } from "@/lib/chain-adapter";
+import { getChainAssets, type ChainAsset } from "@/lib/chain-assets";
+import { useChainBalances, balanceKey } from "@/hooks/use-chain-balances";
 import { saveTransaction } from "@/lib/transaction-history";
 import { estimateGasFee, type FeeEstimate } from "@/lib/fee-estimator";
 import { useToast } from "@/hooks/use-toast";
@@ -24,46 +25,19 @@ const TIER_ICONS = { slow: Clock, standard: Gauge, fast: Zap };
 const TIER_LABELS = { slow: "Slow", standard: "Standard", fast: "Fast" };
 const TIER_COLORS = { slow: "text-muted-foreground", standard: "text-primary", fast: "text-amber-400" };
 
-interface TokenChoice {
-  symbol: string;
-  name: string;
-  contractAddress: string | null;
-  decimals: number;
-  chainId: number;
-}
-
-const nativeTokenFor = (chain: ChainConfig): TokenChoice => ({
-  symbol: chain.symbol,
-  name: `${chain.symbol} (Native)`,
-  contractAddress: null,
-  decimals: chain.decimals,
-  chainId: chain.chainId ?? 0,
-});
-
 const Send = () => {
   const [activeChainId, setActiveChainId] = useState<string>(getActiveChainId());
   const activeChain = useMemo(() => getChainById(activeChainId) || getChainById("gyds")!, [activeChainId]);
   const isEvm = activeChain.type === "evm";
   const isGyds = activeChain.id === "gyds";
 
-  // Tokens available for the active chain
-  const allTokens: TokenChoice[] = useMemo(() => {
-    const native = nativeTokenFor(activeChain);
-    const extras: TokenChoice[] = [];
-    if (isGyds) {
-      extras.push({ symbol: "GYD", name: "GYD Stablecoin", contractAddress: null, decimals: 6, chainId: 13370 });
-    }
-    const custom = getCustomTokens()
-      .filter((t) => (t.chainId ?? 13370) === (activeChain.chainId ?? 0))
-      .map<TokenChoice>((t) => ({
-        symbol: t.symbol, name: t.name,
-        contractAddress: t.contractAddress, decimals: t.decimals,
-        chainId: t.chainId ?? 13370,
-      }));
-    return [native, ...extras, ...custom];
-  }, [activeChain, isGyds]);
+  // Tokens available for the active chain (native + GYD + custom imports on this chain)
+  const allTokens: ChainAsset[] = useMemo(
+    () => getChainAssets(activeChain),
+    [activeChain],
+  );
 
-  const [selectedToken, setSelectedToken] = useState<TokenChoice>(allTokens[0]);
+  const [selectedToken, setSelectedToken] = useState<ChainAsset>(allTokens[0]);
   const [amount, setAmount]               = useState("");
   const [address, setAddress]             = useState("");
   const [password, setPassword]           = useState("");
@@ -75,10 +49,16 @@ const Send = () => {
   const [feeEstimate, setFeeEstimate]     = useState<FeeEstimate | null>(null);
   const [loadingFee, setLoadingFee]       = useState(false);
   const [gasTier, setGasTier]             = useState<GasTier>("standard");
-  const [balance, setBalance]             = useState<string | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(false);
+  const [refreshKey, setRefreshKey]       = useState(0);
   const { toast } = useToast();
   const wallet = getWalletAddress();
+
+  // Live balances for every asset on the active chain — drives both the
+  // per-chip balance hints and the selected-token MAX/overflow logic.
+  const { balances, loading: loadingBalance } = useChainBalances(
+    activeChain, allTokens, wallet, refreshKey,
+  );
+  const balance = balances[balanceKey(selectedToken)] ?? null;
 
   // Reset selected token when chain changes
   useEffect(() => {
@@ -88,36 +68,6 @@ const Send = () => {
     setTxError(null);
     setFeeEstimate(null);
   }, [activeChainId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Fetch live balance whenever token / chain / wallet changes ──
-  useEffect(() => {
-    if (!wallet || !isEvm) { setBalance(null); return; }
-    setBalance(null);
-    setLoadingBalance(true);
-
-    (async () => {
-      try {
-        if (isGyds) {
-          const rpc = await getActiveRpc();
-          if (!rpc) { setLoadingBalance(false); return; }
-          const bal = selectedToken.contractAddress
-            ? await fetchTokenBalance(wallet, selectedToken.contractAddress, selectedToken.decimals, rpc)
-            : await fetchBalance(wallet, rpc);
-          setBalance(bal);
-        } else {
-          const adapter = new EVMAdapter(activeChain);
-          const bal = selectedToken.contractAddress
-            ? await adapter.getTokenBalance(selectedToken.contractAddress, wallet, selectedToken.decimals)
-            : await adapter.getNativeBalance(wallet);
-          setBalance(bal);
-        }
-      } catch {
-        setBalance(null);
-      } finally {
-        setLoadingBalance(false);
-      }
-    })();
-  }, [wallet, selectedToken, activeChain, isEvm, isGyds]);
 
   const balanceNum   = balance !== null ? parseFloat(balance) : null;
   const amountNum    = parseFloat(amount) || 0;
@@ -218,22 +168,8 @@ const Send = () => {
         txHash: hash, timestamp: Date.now(), status: "confirmed",
       });
 
-      // Refresh balance
-      if (isGyds) {
-        const rpc = await getActiveRpc();
-        if (rpc) {
-          const bal = selectedToken.contractAddress
-            ? await fetchTokenBalance(wallet, selectedToken.contractAddress, selectedToken.decimals, rpc)
-            : await fetchBalance(wallet, rpc);
-          setBalance(bal);
-        }
-      } else {
-        const adapter = new EVMAdapter(activeChain);
-        const bal = selectedToken.contractAddress
-          ? await adapter.getTokenBalance(selectedToken.contractAddress, wallet, selectedToken.decimals)
-          : await adapter.getNativeBalance(wallet);
-        setBalance(bal);
-      }
+      // Refresh balances for all chain assets
+      setRefreshKey((k) => k + 1);
 
       toast({ title: "Transaction sent!", description: `TX: ${hash.slice(0, 10)}…` });
     } catch (err: unknown) {
@@ -277,20 +213,27 @@ const Send = () => {
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Select Token ({allTokens.length} available)</label>
             <div className="flex gap-2 flex-wrap">
-              {allTokens.map((t) => (
-                <button
-                  key={`${t.chainId}-${t.symbol}-${t.contractAddress ?? "native"}`}
-                  data-testid={`token-${t.symbol}`}
-                  onClick={() => { setSelectedToken(t); setAmount(""); }}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    selectedToken.symbol === t.symbol && selectedToken.contractAddress === t.contractAddress
-                      ? "gradient-primary text-primary-foreground glow-primary"
-                      : "bg-card text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {t.symbol}
-                </button>
-              ))}
+              {allTokens.map((t) => {
+                const tBal = balances[balanceKey(t)];
+                const isActive = selectedToken.symbol === t.symbol && selectedToken.contractAddress === t.contractAddress;
+                return (
+                  <button
+                    key={`${t.chainId}-${t.symbol}-${t.contractAddress ?? "native"}`}
+                    data-testid={`token-${t.symbol}`}
+                    onClick={() => { setSelectedToken(t); setAmount(""); }}
+                    className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all flex flex-col items-start leading-tight ${
+                      isActive
+                        ? "gradient-primary text-primary-foreground glow-primary"
+                        : "bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span>{t.symbol}</span>
+                    <span className={`text-[10px] font-normal ${isActive ? "opacity-90" : "text-muted-foreground/70"}`}>
+                      {tBal !== undefined ? parseFloat(tBal).toLocaleString(undefined, { maximumFractionDigits: 4 }) : "—"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
