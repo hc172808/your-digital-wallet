@@ -17,6 +17,8 @@ export function useChainBalances(
 ) {
   const [balances, setBalances] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const lastRefreshRef = useRef<number>(0);
+  const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!walletAddress || chain.type !== "evm" || assets.length === 0) {
