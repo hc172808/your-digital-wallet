@@ -66,9 +66,6 @@ export function useChainBalances(
     // Throttle rapid focus/visibility events so a flurry of tab switches does
     // not spam RPCs or flash the loading state.
     const THROTTLE_MS = 2000;
-    const lastRefreshRef = useRef<number>(0);
-    const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
     const throttledRun = () => {
       if (throttleTimerRef.current) clearTimeout(throttleTimerRef.current);
       const now = Date.now();
