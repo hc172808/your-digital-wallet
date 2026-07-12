@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EVMAdapter, type ChainConfig } from "@/lib/chain-adapter";
 import { getActiveRpc } from "@/lib/network-config";
 import { fetchBalance, fetchTokenBalance } from "@/lib/wallet-core";
